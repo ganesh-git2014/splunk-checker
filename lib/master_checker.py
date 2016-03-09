@@ -7,9 +7,5 @@ from lib.checker import Checker
 
 
 class MasterChecker(Checker):
-
-    def check_license(self):
-        pass
-
     def check_replicate_factor(self):
         pass
