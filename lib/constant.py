@@ -14,3 +14,20 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+
+SPLUNK_ROLE = frozenset([
+    'master',
+    'searchhead',
+    'indexer',
+    'forwarder'
+])
+
+
+class CheckItem:
+    SPLUNK_STATUS = 'splunk_status'
+    SSL = 'ssl'
+    LICENSE = 'license'
+    SEARCH_FACTOR = 'search_factor'
+    REPLICATE_FACTOR = 'replicate_factor'
+    SHC_STATUS = 'shc_status'
