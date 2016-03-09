@@ -42,6 +42,16 @@ class Checker(object):
 
         return session_key
 
+    def _request_get(self, endpoint):
+        assert endpoint.startswith('/')
+        uri = self.splunk_uri + endpoint
+        response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False)
+        parsed_response = response.json()
+        if response.status_code == 200:
+            return parsed_response
+        else:
+            raise HTTPException(parsed_response['messages'])
+
     def check_splunk_status(self):
         try:
             self._password2sessionkey()
@@ -57,6 +67,21 @@ class Checker(object):
     def check_conf_files(self):
         pass
 
+    def _catch_http_exception(check_method):
+        """
+        This is a decorator to catch HTTPException for the wrapped function.
+        """
+        def wrap(self, *args):
+            try:
+                result = check_method(self, *args)
+            except HTTPException, e:
+                result = e.messages
+
+            return result
+
+        return wrap
+
+    @_catch_http_exception
     def check_license(self):
         """
         :return: URI of license master if the peer is a slave, otherwise return the license info.
@@ -64,10 +89,7 @@ class Checker(object):
         # Fixme: What if it did not enable license master?
         result = dict()
         # Assume the splunk is license slave first.
-        uri = self.splunk_uri + '/services/licenser/localslave'
-        response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False)
-        assert response.status_code == 200
-        parsed_response = response.json()
+        parsed_response = self._request_get('/services/licenser/localslave')
         # Fixme: What if more than one license master is enabled?
         license_master = parsed_response['entry'][0]['content']['master_uri']
         result['license_master'] = license_master
@@ -75,9 +97,7 @@ class Checker(object):
         # Assume the splunk is a license master now.
         if license_master == 'self':
             result['licenses'] = dict()
-            uri = self.splunk_uri + '/services/licenser/licenses'
-            response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False)
-            parsed_response = response.json()
+            parsed_response = self._request_get('/services/licenser/licenses')
 
             # The following content are what we want to reserve from the endpoint.
             for msg in parsed_response['entry']:
@@ -86,9 +106,7 @@ class Checker(object):
                         self._select_dict(msg['content'], ['expiration_time', 'label', 'quota', 'type'])
 
             # Acquire the total license usage
-            uri = self.splunk_uri + '/services/licenser/usage/license_usage'
-            response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False)
-            parsed_response = response.json()
+            parsed_response = self._request_get('/services/licenser/usage/license_usage')
             result['usage'] = self._select_dict(parsed_response['entry'][0]['content'], ['quota', 'slaves_usage_bytes'])
 
         return result
@@ -101,3 +119,11 @@ class Checker(object):
         will return {'b': 2, 'c': 3}
         """
         return {key: dict_obj[key] for key in select_keys}
+
+
+class HTTPException(Exception):
+    def __init__(self, messages):
+        """
+        :param messages: is a list of messages.
+        """
+        self.messages = messages

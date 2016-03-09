@@ -28,6 +28,5 @@ class CheckItem:
     SPLUNK_STATUS = 'splunk_status'
     SSL = 'ssl'
     LICENSE = 'license'
-    SEARCH_FACTOR = 'search_factor'
-    REPLICATE_FACTOR = 'replicate_factor'
-    SHC_STATUS = 'shc_status'
+    CLUSTER = 'cluster'
+    SHCLUSTER = 'shcluster'
