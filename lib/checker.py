@@ -22,7 +22,6 @@ def catch_http_exception(check_method):
             result = e.messages
 
         return result
-
     return wrap
 
 
@@ -38,6 +37,7 @@ class Checker(object):
         self.splunk_uri = splunk_uri
         self.username = username
         self.password = password
+        # TODO: handle http exception here.
         self._session_key = self._password2sessionkey()
         self._header = {'Authorization': 'Splunk %s' % self._session_key}
 
@@ -65,7 +65,7 @@ class Checker(object):
         if response.status_code == 200:
             return parsed_response
         else:
-            raise HTTPException(parsed_response['messages'])
+            raise HTTPException(response)
 
     def check_splunk_status(self):
         try:
@@ -100,7 +100,7 @@ class Checker(object):
         # Assume the splunk is a license master now.
         if license_master == 'self':
             result['licenses'] = dict()
-            parsed_response = self._request_get('/services/licenser/licenses')
+            parsed_response = self._request_get('/services/licenser/licenses1')
 
             # The following content are what we want to reserve from the endpoint.
             for msg in parsed_response['entry']:
@@ -125,8 +125,13 @@ class Checker(object):
 
 
 class HTTPException(Exception):
-    def __init__(self, messages):
+    def __init__(self, response):
         """
         :param messages: is a list of messages.
         """
-        self.messages = messages
+        self.messages = response.json()
+        # This key value is used for ClusterChecker._check_http_exception to identify weather
+        # the check result is a http exception or a normal result.
+        self.messages['is_http_exception'] = True
+        self.messages['status_code'] = response.status_code
+        self.messages['url'] = response.url

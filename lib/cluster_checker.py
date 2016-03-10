@@ -13,6 +13,9 @@ from lib.searchhead_checker import SearchHeadChecker
 
 class ClusterChecker(object):
     def __init__(self):
+        # TODO: Consider multi-site cluster.
+        # (May: 1. Create multi ClusterChecker instances, and add a multi-site check from outside;
+        #       2. Handle the multi-site here.)
         self.master_checker = None
         self.searchhead_checkers = []
         self.indexer_checkers = []
@@ -36,7 +39,6 @@ class ClusterChecker(object):
         assert role in SPLUNK_ROLE
 
         if role == 'master':
-            assert self.master_checker is None
             self.master_checker = MasterChecker(splunk_uri, username, password)
         elif role == 'searchhead':
             self.searchhead_checkers.append(SearchHeadChecker(splunk_uri, username, password))
@@ -77,7 +79,8 @@ class ClusterChecker(object):
         return check_result
 
     def check_cluster(self):
-        check_result = self.master_checker.check_cluster()
+        check_result = dict()
+        check_result[self.master_checker.splunk_uri] = self.master_checker.check_cluster()
 
         return check_result
 
@@ -106,6 +109,12 @@ class ClusterChecker(object):
                 simple_result[item] = msg_list
 
             elif item == CheckItem.LICENSE:
+                # Return the http exception message and skip checking if http exception exists.
+                http_exception_msg = self._check_http_exception(check_result[item])
+                if http_exception_msg:
+                    simple_result[item] = http_exception_msg
+                    continue
+                # Start license check.
                 msg_list = []
                 all_peer_uri = []
                 for checker in self.all_checkers:
@@ -130,25 +139,46 @@ class ClusterChecker(object):
                         # Set the threshold to about 1 GB
                         th_quota = 100000
                         if check_result[item][uri]['usage']['quota'] - check_result[item][uri]['usage'][
-                                'slaves_usage_bytes'] < th_quota:
+                            'slaves_usage_bytes'] < th_quota:
                             msg_list.append('The usage of the license is hitting the quota.')
 
                 simple_result[item] = msg_list
 
             elif item == CheckItem.CLUSTER:
+                http_exception_msg = self._check_http_exception(check_result[item])
+                if http_exception_msg:
+                    simple_result[item] = http_exception_msg
+                    continue
                 msg_list = []
                 # Check replication factor
-                if check_result[item]['replication_factor'] != self.replication_factor:
+                if check_result[item][self.master_checker.splunk_uri]['replication_factor'] != self.replication_factor:
                     msg_list.append('Replication factor [{0}] is different from defined [{1}].'.format(
-                        check_result[item]['replication_factor'], self.replication_factor))
+                        check_result[item][self.master_checker.splunk_uri]['replication_factor'],
+                        self.replication_factor))
                 # Check search factor
-                if check_result[item]['search_factor'] != self.search_factor:
+                if check_result[item][self.master_checker.splunk_uri]['search_factor'] != self.search_factor:
                     msg_list.append('Search factor [{0}] is different from defined [{1}].'.format(
-                        check_result[item]['search_factor'], self.search_factor))
+                        check_result[item][self.master_checker.splunk_uri]['search_factor'], self.search_factor))
 
                 simple_result[item] = msg_list
 
         return simple_result
+
+    def _check_http_exception(self, check_result):
+        """
+        Check if there is http exception messages among the check result.
+        """
+        for result in check_result.values():
+            # Fixme: The check method here is not very good.
+            if 'is_http_exception' in result and result['is_http_exception'] is True:
+                warning_messages = []
+                for msg in result['messages']:
+                    warning_messages.append(
+                        'Http exception occurred at [{url}], warning messages: [{msg}]'.format(url=result['url'],
+                                                                                               msg=msg['text']))
+                return warning_messages
+        else:
+            return None
 
 
 if __name__ == '__main__':
@@ -158,5 +188,8 @@ if __name__ == '__main__':
     checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
-    result = checker1.check_all_items()
-    result = checker1.check_license()
+    result, warning_msg = checker1.check_all_items()
+
+    import json
+
+    print json.dumps(result)
