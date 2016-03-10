@@ -11,6 +11,21 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
+def catch_http_exception(check_method):
+    """
+    This is a decorator to catch HTTPException for the wrapped function.
+    """
+    def wrap(*args):
+        try:
+            result = check_method(*args)
+        except HTTPException, e:
+            result = e.messages
+
+        return result
+
+    return wrap
+
+
 class Checker(object):
     """
     The base class for splunk checkers
@@ -61,27 +76,15 @@ class Checker(object):
         else:
             return 'Up'
 
+    @catch_http_exception
     def check_ssl(self):
         pass
 
+    @catch_http_exception
     def check_conf_files(self):
         pass
 
-    def _catch_http_exception(check_method):
-        """
-        This is a decorator to catch HTTPException for the wrapped function.
-        """
-        def wrap(self, *args):
-            try:
-                result = check_method(self, *args)
-            except HTTPException, e:
-                result = e.messages
-
-            return result
-
-        return wrap
-
-    @_catch_http_exception
+    @catch_http_exception
     def check_license(self):
         """
         :return: URI of license master if the peer is a slave, otherwise return the license info.
