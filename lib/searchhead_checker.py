@@ -12,4 +12,4 @@ class SearchHeadChecker(Checker):
         result = dict()
         parsed_response = self._request_get('/services/shcluster/member/members')
 
-        parsed_response['entry']
+        parsed_response['entry'][0]['content']

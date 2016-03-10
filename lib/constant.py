@@ -23,10 +23,10 @@ SPLUNK_ROLE = frozenset([
     'forwarder'
 ])
 
-
-class CheckItem:
-    SPLUNK_STATUS = 'splunk_status'
-    SSL = 'ssl'
-    LICENSE = 'license'
-    CLUSTER = 'cluster'
-    SHCLUSTER = 'shcluster'
+CHECK_ITEM = frozenset([
+    'SPLUNK_STATUS',
+    # 'SSL',
+    'LICENSE',
+    'CLUSTER',
+    # 'SHCLUSTER'
+])

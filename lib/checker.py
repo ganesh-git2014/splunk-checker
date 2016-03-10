@@ -100,7 +100,7 @@ class Checker(object):
         # Assume the splunk is a license master now.
         if license_master == 'self':
             result['licenses'] = dict()
-            parsed_response = self._request_get('/services/licenser/licenses1')
+            parsed_response = self._request_get('/services/licenser/licenses')
 
             # The following content are what we want to reserve from the endpoint.
             for msg in parsed_response['entry']:

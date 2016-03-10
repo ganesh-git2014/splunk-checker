@@ -4,7 +4,7 @@
 @since: 3/8/16
 '''
 import time
-from lib.constant import SPLUNK_ROLE, CheckItem
+from lib.constant import SPLUNK_ROLE, CHECK_ITEM
 from lib.forwarder_checker import ForwarderChecker
 from lib.indexer_checker import IndexerChecker
 from lib.master_checker import MasterChecker
@@ -23,6 +23,7 @@ class ClusterChecker(object):
         self.search_factor = None
         self.replication_factor = None
         self.enable_ssl = False
+        self.enable_shc = True
 
     @property
     def all_checkers(self):
@@ -54,15 +55,34 @@ class ClusterChecker(object):
         :return: A dict of each item and corresponding result.
         """
         check_result = dict()
-        check_result[CheckItem.SPLUNK_STATUS] = self.check_splunk_status()
-        check_result[CheckItem.SSL] = self.check_ssl
-        check_result[CheckItem.LICENSE] = self.check_license()
-        check_result[CheckItem.CLUSTER] = self.check_cluster()
-        check_result[CheckItem.SHCLUSTER] = self.check_shcluster()
-
-        warning_msg = self._generate_warning_messages(check_result)
+        warning_msg = dict()
+        for item in CHECK_ITEM:
+            check_result[item] = self._map_check_method(item)()
+            exception_msg = self._check_http_exception(check_result[item])
+            if exception_msg:
+                warning_msg[item] = exception_msg
+            else:
+                warning_msg[item] = self._map_generate_message_method(item)(check_result[item])
 
         return check_result, warning_msg
+
+    def _map_check_method(self, item):
+        assert item in CHECK_ITEM
+        method_map = {'SPLUNK_STATUS': self.check_splunk_status,
+                      'SSL': self.check_ssl,
+                      'LICENSE': self.check_license,
+                      'CLUSTER': self.check_cluster,
+                      'SHCLUSTER': self.check_shcluster}
+        return method_map[item]
+
+    def _map_generate_message_method(self, item):
+        assert item in CHECK_ITEM
+        method_map = {'SPLUNK_STATUS': self._generate_splunk_status_message,
+                      'SSL': self._generate_ssl_message,
+                      'LICENSE': self._generate_license_message,
+                      'CLUSTER': self._generate_cluster_message,
+                      'SHCLUSTER': self._generate_shcluster_message}
+        return method_map[item]
 
     def check_splunk_status(self):
         check_result = dict()
@@ -92,77 +112,68 @@ class ClusterChecker(object):
         for checker in self.searchhead_checkers:
             check_result[checker.splunk_uri] = checker.check_shcluster()
 
-    def _generate_warning_messages(self, check_result):
+        return check_result
+
+    def _generate_splunk_status_message(self, check_result):
         """
         Transform the concrete result into a rough True or False.
         The return result contains the warning messages(should be a list), if the message list is empty, that means the
         check item is [OK], otherwise it has some problems.
         """
-        simple_result = dict()
-        for item in check_result.keys():
-            if item == CheckItem.SPLUNK_STATUS:
-                msg_list = []
-                for uri in check_result[item].keys():
-                    if check_result[item][uri] == 'Down':
-                        msg_list.append('[{0}] is down!'.format(uri))
+        msg_list = []
+        for uri in check_result.keys():
+            if check_result[uri] == 'Down':
+                msg_list.append('[{0}] is down!'.format(uri))
+        return msg_list
 
-                simple_result[item] = msg_list
+    def _generate_license_message(self, check_result):
+        # Start license check.
+        msg_list = []
+        all_peer_uri = []
+        for checker in self.all_checkers:
+            all_peer_uri.append(checker.splunk_uri)
+        for uri in check_result.keys():
+            if check_result[uri]['license_master'] != 'self':
+                # Check if the license master is one peer of the cluster.
+                if check_result[uri]['license_master'] not in all_peer_uri:
+                    msg_list.append('The license master of [{0}] is not in the cluster'.format(uri))
+            else:
+                # Check if all licenses are expired.
+                now = time.time()
+                # Set the threshold to 1 day.
+                th_time = 3600 * 24
+                for license in check_result[uri]['licenses'].values():
+                    if license['expiration_time'] - int(now) > th_time:
+                        break
+                else:
+                    msg_list.append('All the licenses have expired.(Or will expire soon.)')
+                # Check if the license usage is hitting the limit.
+                # Set the threshold to about 1 GB
+                th_quota = 100000
+                if check_result[uri]['usage']['quota'] - check_result[uri]['usage']['slaves_usage_bytes'] < th_quota:
+                    msg_list.append('The usage of the license is hitting the quota.')
 
-            elif item == CheckItem.LICENSE:
-                # Return the http exception message and skip checking if http exception exists.
-                http_exception_msg = self._check_http_exception(check_result[item])
-                if http_exception_msg:
-                    simple_result[item] = http_exception_msg
-                    continue
-                # Start license check.
-                msg_list = []
-                all_peer_uri = []
-                for checker in self.all_checkers:
-                    all_peer_uri.append(checker.splunk_uri)
-                for uri in check_result[item].keys():
-                    if check_result[item][uri]['license_master'] != 'self':
-                        # Check if the license master is one peer of the cluster.
-                        if check_result[item][uri]['license_master'] not in all_peer_uri:
-                            msg_list.append('The license master of [{0}] is not in the cluster'.format(uri))
-                    else:
-                        # Check if all licenses are expired.
-                        now = time.time()
-                        # Set the threshold to 1 day.
-                        th_time = 3600 * 24
-                        for license in check_result[item][uri]['licenses'].values():
-                            if license['expiration_time'] - int(now) > th_time:
-                                break
-                        else:
-                            msg_list.append('All the licenses have expired.(Or will expire soon.)')
+        return msg_list
 
-                        # Check if the license usage is hitting the limit.
-                        # Set the threshold to about 1 GB
-                        th_quota = 100000
-                        if check_result[item][uri]['usage']['quota'] - check_result[item][uri]['usage'][
-                            'slaves_usage_bytes'] < th_quota:
-                            msg_list.append('The usage of the license is hitting the quota.')
+    def _generate_cluster_message(self, check_result):
+        msg_list = []
+        # Check replication factor
+        if check_result[self.master_checker.splunk_uri]['replication_factor'] != self.replication_factor:
+            msg_list.append('Replication factor [{0}] is different from defined [{1}].'.format(
+                check_result[self.master_checker.splunk_uri]['replication_factor'],
+                self.replication_factor))
+        # Check search factor
+        if check_result[self.master_checker.splunk_uri]['search_factor'] != self.search_factor:
+            msg_list.append('Search factor [{0}] is different from defined [{1}].'.format(
+                check_result[self.master_checker.splunk_uri]['search_factor'], self.search_factor))
 
-                simple_result[item] = msg_list
+        return msg_list
 
-            elif item == CheckItem.CLUSTER:
-                http_exception_msg = self._check_http_exception(check_result[item])
-                if http_exception_msg:
-                    simple_result[item] = http_exception_msg
-                    continue
-                msg_list = []
-                # Check replication factor
-                if check_result[item][self.master_checker.splunk_uri]['replication_factor'] != self.replication_factor:
-                    msg_list.append('Replication factor [{0}] is different from defined [{1}].'.format(
-                        check_result[item][self.master_checker.splunk_uri]['replication_factor'],
-                        self.replication_factor))
-                # Check search factor
-                if check_result[item][self.master_checker.splunk_uri]['search_factor'] != self.search_factor:
-                    msg_list.append('Search factor [{0}] is different from defined [{1}].'.format(
-                        check_result[item][self.master_checker.splunk_uri]['search_factor'], self.search_factor))
+    def _generate_ssl_message(self):
+        pass
 
-                simple_result[item] = msg_list
-
-        return simple_result
+    def _generate_shcluster_message(self):
+        pass
 
     def _check_http_exception(self, check_result):
         """
