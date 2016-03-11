@@ -3,7 +3,7 @@
 @contact: cuyu@splunk.com
 @since: 3/8/16
 '''
-from lib.checker import Checker
+from checker import Checker
 
 
 class IndexerChecker(Checker):

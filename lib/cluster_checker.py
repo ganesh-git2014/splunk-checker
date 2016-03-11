@@ -4,11 +4,11 @@
 @since: 3/8/16
 '''
 import time
-from lib.constant import SPLUNK_ROLE, CHECK_ITEM
-from lib.forwarder_checker import ForwarderChecker
-from lib.indexer_checker import IndexerChecker
-from lib.master_checker import MasterChecker
-from lib.searchhead_checker import SearchHeadChecker
+from constant import SPLUNK_ROLE, CHECK_ITEM
+from forwarder_checker import ForwarderChecker
+from indexer_checker import IndexerChecker
+from master_checker import MasterChecker
+from searchhead_checker import SearchHeadChecker
 
 
 class ClusterChecker(object):

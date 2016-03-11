@@ -7,8 +7,14 @@ import json
 import sys
 import xml
 import xml.etree.ElementTree as ElementTree
+# import default
+import os
 
-from lib.cluster_checker import ClusterChecker
+# Why cannot import from lib (as package) directly?
+path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
+sys.path.append(path_prepend)
+
+from cluster_checker import ClusterChecker
 
 SCHEME = """<scheme>
     <title>splunk checker</title>
@@ -25,9 +31,9 @@ SCHEME = """<scheme>
                 </description>
             </arg>
 
-            <arg name="folder">
-                <title>Code Folder</title>
-                <description>Input the folder path you want to analyze:</description>
+            <arg name="splunk_uri">
+                <title>splunk_uri</title>
+                <description>Input the splunk_uri:</description>
             </arg>
         </args>
     </endpoint>
@@ -56,14 +62,18 @@ def do_scheme():
 def run():
     # Read the settings
     config_xml = sys.stdin.read()
-    config_parsed = ElementTree.fromstring(config_xml)
-    for element in config_parsed.findall('.//param'):
-        if element.attrib['name'] == 'folder':
-            if element.text is not None:
-                folder_path = element.text
+    # config_parsed = ElementTree.fromstring(config_xml)
+    # for element in config_parsed.findall('.//param'):
+    #     if element.attrib['name'] == 'folder':
+    #         if element.text is not None:
+    #             folder_path = element.text
 
     checker = ClusterChecker()
-    result = checker.check_all_items()
+    checker.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
+    checker.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
+    checker.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
+    checker.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
+    result, msg = checker.check_all_items()
     init_stream()
     send_data(json.dumps(result))
     fini_stream()
