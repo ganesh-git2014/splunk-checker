@@ -1,2 +1,5 @@
 [splunk_checker://default]
-splunk_uri = <value>
+cluster_id = <value>
+role = <value>
+username = <value>
+password = <value>

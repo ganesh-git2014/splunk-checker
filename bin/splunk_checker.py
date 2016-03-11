@@ -25,15 +25,35 @@ SCHEME = """<scheme>
     <endpoint>
         <args>
             <arg name="name">
-                <title>Cluster name</title>
+                <title>Splunk URI</title>
+                <description>E.g. https://systest-auto-master:1901</description>
+            </arg>
+            <arg name="cluster_id">
+                <title>cluster ID</title>
                 <description>
-                   Should be unique.
+                   A label for all splunk instances of the same cluster.
                 </description>
             </arg>
-
-            <arg name="splunk_uri">
-                <title>splunk_uri</title>
-                <description>Input the splunk_uri:</description>
+            <arg name="role">
+                <title>Role</title>
+                <validation>
+                   validate(match('role', '^master$|^indexer$|^searchhead$|^forwarder$'), "Role must be one of: [master/indexer/searchhead/forwarder]")
+                </validation>
+                <description>
+                   Splunk role.
+                </description>
+            </arg>
+            <arg name="username">
+                <title>Username</title>
+                <description>
+                   Splunk username.
+                </description>
+            </arg>
+            <arg name="password">
+                <title>Password</title>
+                <description>
+                   Splunk password.
+                </description>
             </arg>
         </args>
     </endpoint>
