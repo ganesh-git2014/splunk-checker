@@ -4,7 +4,9 @@
 @since: 3/8/16
 '''
 import requests
+from requests.models import Response
 import xml.etree.ElementTree as ElementTree
+
 
 # from requests.packages.urllib3.exceptions import InsecureRequestWarning
 #
@@ -15,6 +17,7 @@ def catch_http_exception(check_method):
     """
     This is a decorator to catch HTTPException for the wrapped function.
     """
+
     def wrap(*args):
         try:
             result = check_method(*args)
@@ -22,6 +25,7 @@ def catch_http_exception(check_method):
             result = e.messages
 
         return result
+
     return wrap
 
 
@@ -37,8 +41,10 @@ class Checker(object):
         self.splunk_uri = splunk_uri
         self.username = username
         self.password = password
-        # TODO: handle http exception here.
-        self._session_key = self._password2sessionkey()
+        try:
+            self._session_key = self._password2sessionkey()
+        except:
+            self._session_key = None
         self._header = {'Authorization': 'Splunk %s' % self._session_key}
 
     def _password2sessionkey(self):
@@ -58,6 +64,8 @@ class Checker(object):
         return session_key
 
     def _request_get(self, endpoint):
+        if self._session_key is None:
+            raise HTTPException('SKIP')
         assert endpoint.startswith('/')
         uri = self.splunk_uri + endpoint
         response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False)
@@ -129,9 +137,20 @@ class HTTPException(Exception):
         """
         :param messages: is a list of messages.
         """
-        self.messages = response.json()
-        # This key value is used for ClusterChecker._check_http_exception to identify weather
-        # the check result is a http exception or a normal result.
+        self.messages = dict()
         self.messages['is_http_exception'] = True
-        self.messages['status_code'] = response.status_code
-        self.messages['url'] = response.url
+        if isinstance(response, Response):
+            self.messages = response.json()
+            # This key value is used for ClusterChecker._check_http_exception to identify weather
+            # the check result is a http exception or a normal result.
+            self.messages['status_code'] = response.status_code
+            self.messages['url'] = response.url
+        else:
+            if response == 'SKIP':
+                # Try to fake a similar structure as above
+                tmp = dict()
+                tmp['text'] = 'The check is skipped due to http exception.'
+                self.messages['messages'] = []
+                self.messages['messages'].append(tmp)
+                self.messages['status_code'] = None
+                self.messages['url'] = None

@@ -19,7 +19,7 @@ from cluster_checker import ClusterChecker
 SCHEME = """<scheme>
     <title>splunk checker</title>
     <description>splunk health checker</description>
-    <use_external_validation>true</use_external_validation>
+    <use_external_validation>false</use_external_validation>
     <streaming_mode>xml</streaming_mode>
 
     <endpoint>
@@ -36,12 +36,11 @@ SCHEME = """<scheme>
             </arg>
             <arg name="role">
                 <title>Role</title>
-                <validation>
-                   validate(match('role', '^master$|^indexer$|^searchhead$|^forwarder$'), "Role must be one of: [master/indexer/searchhead/forwarder]")
-                </validation>
                 <description>
                    Splunk role.
                 </description>
+                <required_on_edit>false</required_on_edit>
+                <required_on_create>false</required_on_create>
             </arg>
             <arg name="username">
                 <title>Username</title>
@@ -69,8 +68,8 @@ def fini_stream():
     sys.stdout.write("</stream>")
 
 
-def send_data(buf):
-    sys.stdout.write("<event><data>")
+def send_data(buf, sourcetype):
+    sys.stdout.write("<event><sourcetype>{0}</sourcetype><data>".format(sourcetype))
     sys.stdout.write(xml.sax.saxutils.escape(buf))
     sys.stdout.write("</data></event>")
 
@@ -95,13 +94,15 @@ def run():
     checker.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
     result, msg = checker.check_all_items()
     init_stream()
-    send_data(json.dumps(result))
+    send_data(json.dumps(result), 'check_stats')
+    send_data(json.dumps(msg), 'warning_msg')
     fini_stream()
 
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         if sys.argv[1] == "--scheme":
+            # Send the scheme will override the xml file defined under default/data/ui/manager/
             do_scheme()
         elif sys.argv[1] == "--test":
             print 'No tests for the scheme present'
