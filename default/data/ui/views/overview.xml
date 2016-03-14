@@ -1,2 +1,13 @@
-<dashboard>
+<dashboard script="table_icons_rangemap.js" stylesheet="table_decorations.css">
+    <label>Overview</label>
+    <row>
+        <panel>
+            <table id="overview_table">
+                <title>Splunk check result</title>
+                <searchString>index="splunk_checker" source="warning_msg" earliest=-20m | stats first(_raw) as "Warning" by sourcetype | eval range = if(Warning == "[]", "low", "severe")</searchString>
+                <earliestTime>-10m</earliestTime>
+                <option name="drilldown">row</option>
+            </table>
+        </panel>
+    </row>
 </dashboard>

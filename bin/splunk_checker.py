@@ -5,16 +5,18 @@
 '''
 import json
 import sys
-import xml
+from xml.sax import saxutils
 import xml.etree.ElementTree as ElementTree
 # import default
 import os
 
 # Why cannot import from lib (as package) directly?
+
 path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
 sys.path.append(path_prepend)
 
 from cluster_checker import ClusterChecker
+from constant import CHECK_ITEM
 
 SCHEME = """<scheme>
     <title>splunk checker</title>
@@ -68,9 +70,9 @@ def fini_stream():
     sys.stdout.write("</stream>")
 
 
-def send_data(buf, sourcetype):
-    sys.stdout.write("<event><sourcetype>{0}</sourcetype><data>".format(sourcetype))
-    sys.stdout.write(xml.sax.saxutils.escape(buf))
+def send_data(buf, source, sourcetype):
+    sys.stdout.write("<event><source>{0}</source><sourcetype>{1}</sourcetype><data>".format(source, sourcetype))
+    sys.stdout.write(saxutils.escape(buf))
     sys.stdout.write("</data></event>")
 
 
@@ -92,10 +94,11 @@ def run():
     checker.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
     checker.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
-    result, msg = checker.check_all_items()
+    result, warning_messages = checker.check_all_items()
     init_stream()
-    send_data(json.dumps(result), 'check_stats')
-    send_data(json.dumps(msg), 'warning_msg')
+    send_data(json.dumps(result), 'check_stats', 'check_stats')
+    for item in CHECK_ITEM:
+        send_data(json.dumps(warning_messages[item]), 'warning_msg', item)
     fini_stream()
 
 
