@@ -4,6 +4,7 @@
 @since: 3/8/16
 '''
 import time
+import json
 from constant import SPLUNK_ROLE, CHECK_ITEM
 from forwarder_checker import ForwarderChecker
 from indexer_checker import IndexerChecker
@@ -12,7 +13,7 @@ from searchhead_checker import SearchHeadChecker
 
 
 class ClusterChecker(object):
-    def __init__(self):
+    def __init__(self, cluster_id):
         # TODO: Consider multi-site cluster.
         # (May: 1. Create multi ClusterChecker instances, and add a multi-site check from outside;
         #       2. Handle the multi-site here.)
@@ -24,6 +25,7 @@ class ClusterChecker(object):
         self.replication_factor = None
         self.enable_ssl = False
         self.enable_shc = True
+        self.cluster_id = cluster_id
 
     @property
     def all_checkers(self):
@@ -56,6 +58,7 @@ class ClusterChecker(object):
         """
         check_result = dict()
         warning_msg = dict()
+
         for item in CHECK_ITEM:
             check_result[item] = self._map_check_method(item)()
             exception_msg = self._check_http_exception(check_result[item])
@@ -65,6 +68,15 @@ class ClusterChecker(object):
                 warning_msg[item] = self._map_generate_message_method(item)(check_result[item])
 
         return check_result, warning_msg
+
+    def transform_event(self, result):
+        """
+        Transform result to string.
+        """
+        print_msg = ""
+        print_msg += 'cluster_id={0} '.format(self.cluster_id)
+        print_msg += 'info={0}'.format(json.dumps(result))
+        return print_msg
 
     def _map_check_method(self, item):
         assert item in CHECK_ITEM
@@ -193,7 +205,7 @@ class ClusterChecker(object):
 
 
 if __name__ == '__main__':
-    checker1 = ClusterChecker()
+    checker1 = ClusterChecker('env1')
     checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
@@ -201,6 +213,4 @@ if __name__ == '__main__':
 
     result, warning_msg = checker1.check_all_items()
 
-    import json
-
-    print json.dumps(result)
+    print result

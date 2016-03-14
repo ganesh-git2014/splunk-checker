@@ -1,13 +1,32 @@
-<dashboard script="table_icons_rangemap.js" stylesheet="table_decorations.css">
-    <label>Overview</label>
-    <row>
-        <panel>
-            <table id="overview_table">
-                <title>Splunk check result</title>
-                <searchString>index="splunk_checker" source="warning_msg" earliest=-20m | stats first(_raw) as "Warning" by sourcetype | eval range = if(Warning == "[]", "low", "severe")</searchString>
-                <earliestTime>-10m</earliestTime>
-                <option name="drilldown">row</option>
-            </table>
-        </panel>
-    </row>
-</dashboard>
+<form script="table_icons_rangemap.js" stylesheet="table_decorations.css">
+  <label>Overview</label>
+  <fieldset submitButton="false">
+    <input type="dropdown" token="cluster_id" searchWhenChanged="true">
+      <label>Cluster Name</label>
+      <search>
+        <query>index="splunk_checker" | stats count by cluster_id</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>cluster_id</fieldForLabel>
+      <fieldForValue>cluster_id</fieldForValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table id="overview_table">
+        <title>Splunk check result</title>
+        <search>
+          <query>index="splunk_checker" source="warning_msg" cluster_id=$cluster_id$ earliest=-20m | stats first(info) as "Warning" by sourcetype | eval range = if(Warning == "[]", "low", "severe")</query>
+          <earliest>-10m</earliest>
+          <latest></latest>
+        </search>
+        <option name="drilldown">row</option>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+  </row>
+</form>
