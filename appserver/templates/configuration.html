@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h3>Configure Environment for Splunk Checker</h3>
+
+    <p>Please input splunk uri (e.g. https://systest-auto-idx1:1901):</p>
+    <input id="splunk_uri">
+    <p>Username:</p>
+    <input id="username">
+    <p>Password:</p>
+    <input id="password">
+    <script src="/static/app/splunk-checker/js/configuration.js"></script>
+    <button type="button"
+    onclick="click_add_peer()">
+    Add peer!</button>
+
+    <p id="add_success"></p>
+</body>
+</html>

@@ -1,25 +1,40 @@
 <form script="table_icons_rangemap.js" stylesheet="table_decorations.css">
   <label>Overview</label>
-  <fieldset submitButton="false">
-    <input type="dropdown" token="cluster_id" searchWhenChanged="true">
-      <label>Cluster Name</label>
-      <search>
-        <query>index="splunk_checker" | stats count by cluster_id</query>
-        <earliest>-24h@h</earliest>
-        <latest>now</latest>
-      </search>
-      <fieldForLabel>cluster_id</fieldForLabel>
-      <fieldForValue>cluster_id</fieldForValue>
-    </input>
-  </fieldset>
   <row>
     <panel>
-      <table id="overview_table">
-        <title>Splunk check result</title>
+      <title>Environment check result</title>
+      <table id="overview_status_table">
         <search>
-          <query>index="splunk_checker" source="warning_msg" cluster_id=$cluster_id$ earliest=-20m | stats first(info) as "Warning" by sourcetype | eval range = if(Warning == "[]", "low", "severe")</query>
-          <earliest>-10m</earliest>
-          <latest></latest>
+          <query>index="splunk_checker" source="warning_msg" | stats first(info) as "Warning" by sourcetype,cluster_id | fields cluster_id, Warning | eval Warning = if(Warning == "[]", "No", "Yes") | stats count as "Status" by cluster_id, Warning | regex Warning="Yes" | eval Status = if(Status == 0, "low", "severe") | fields cluster_id, Status</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="drilldown">none</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Cluster check result</title>
+      <input type="dropdown" token="cluster_id" searchWhenChanged="true">
+        <label>Cluster Name</label>
+        <search>
+          <query>index="splunk_checker" | stats count by cluster_id</query>
+          <earliest>-12h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <fieldForLabel>cluster_id</fieldForLabel>
+        <fieldForValue>cluster_id</fieldForValue>
+      </input>
+      <table id="cluster_status_table">
+        <search>
+          <query>index="splunk_checker" source="warning_msg" cluster_id=$cluster_id$ | stats first(info) as "Warning" by sourcetype | eval Status = if(Warning == "[]", "low", "severe")</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
         </search>
         <option name="drilldown">row</option>
         <option name="wrap">true</option>

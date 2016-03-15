@@ -14,7 +14,7 @@ require([
     var RangeMapIconRenderer = TableView.BaseCellRenderer.extend({
         canRender: function(cell) {
             // Only use the cell renderer for the range field
-            return cell.field === 'range';
+            return cell.field === 'Status';
         },
         render: function($td, cell) {
             var icon = 'question';
@@ -29,7 +29,11 @@ require([
             }));
         }
     });
-    mvc.Components.get('overview_table').getVisualization(function(tableView){
+    mvc.Components.get('overview_status_table').getVisualization(function(tableView){
+        // Register custom cell renderer, the table will re-render automatically
+        tableView.addCellRenderer(new RangeMapIconRenderer());
+    });
+    mvc.Components.get('cluster_status_table').getVisualization(function(tableView){
         // Register custom cell renderer, the table will re-render automatically
         tableView.addCellRenderer(new RangeMapIconRenderer());
     });

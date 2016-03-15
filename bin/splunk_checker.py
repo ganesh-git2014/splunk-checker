@@ -98,8 +98,8 @@ def run():
 
     checker2 = ClusterChecker('env2')
     checker2.add_peer('https://qa-systest-04.sv.splunk.com:1901', 'master', 'admin', 'changed')
-    checker2.add_peer('https://qa-systest-05.sv.splunk.com:1900', 'indexer', 'admin', 'changed')
-    checker2.add_peer('https://qa-systest-01.sv.splunk.com:1900', 'searchhead', 'admin', 'changed')
+    checker2.add_peer('https://qa-systest-05.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
+    checker2.add_peer('https://qa-systest-01.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
     result2, warning_messages2 = checker2.check_all_items()
     init_stream()
     send_data(checker1.transform_event(result), 'check_stats', 'check_stats')
