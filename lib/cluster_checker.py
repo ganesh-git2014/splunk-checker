@@ -13,7 +13,8 @@ from searchhead_checker import SearchHeadChecker
 
 
 class ClusterChecker(object):
-    def __init__(self, cluster_id):
+    def __init__(self, cluster_id, enable_shcluster=True, enable_cluster=True, search_factor=1, replication_factor=1,
+                 enable_ssl=False):
         # TODO: Consider multi-site cluster.
         # (May: 1. Create multi ClusterChecker instances, and add a multi-site check from outside;
         #       2. Handle the multi-site here.)
@@ -21,10 +22,11 @@ class ClusterChecker(object):
         self.searchhead_checkers = []
         self.indexer_checkers = []
         self.forwarder_checkers = []
-        self.search_factor = None
-        self.replication_factor = None
-        self.enable_ssl = False
-        self.enable_shc = True
+        self.search_factor = search_factor
+        self.replication_factor = replication_factor
+        self.enable_cluster = enable_cluster
+        self.enable_ssl = enable_ssl
+        self.enable_shcluster = enable_shcluster
         self.cluster_id = cluster_id
 
     @property
@@ -50,6 +52,17 @@ class ClusterChecker(object):
         elif role == 'forwarder':
             self.forwarder_checkers.append(ForwarderChecker(splunk_uri, username, password))
 
+    @property
+    def check_points(self):
+        check_items = list(CHECK_ITEM)
+        if not self.enable_cluster:
+            check_items.remove('CLUSTER')
+        if not self.enable_shcluster:
+            check_items.remove('SHCLUSTER')
+        if not self.enable_ssl:
+            check_items.remove('SSL')
+        return check_items
+
     def check_all_items(self):
         # TODO: can check the selected items.
         """
@@ -59,7 +72,7 @@ class ClusterChecker(object):
         check_result = dict()
         warning_msg = dict()
 
-        for item in CHECK_ITEM:
+        for item in self.check_points:
             check_result[item] = self._map_check_method(item)()
             exception_msg = self._check_http_exception(check_result[item])
             if exception_msg:
@@ -184,8 +197,17 @@ class ClusterChecker(object):
     def _generate_ssl_message(self):
         pass
 
-    def _generate_shcluster_message(self):
-        pass
+    def _generate_shcluster_message(self, check_result):
+        msg_list = []
+        assert len(check_result) > 1
+        # Check the captain id is the same from all search heads(so that in the same bundle)
+        captain_id = check_result[self.searchhead_checkers[0].splunk_uri]['captain']['id']
+        for checker in self.searchhead_checkers:
+            if check_result[checker.splunk_uri]['captain']['id'] != captain_id:
+                msg_list.append('The captain id is not consistent!')
+                break
+
+        return msg_list
 
     def _check_http_exception(self, check_result):
         """
@@ -208,6 +230,7 @@ if __name__ == '__main__':
     checker1 = ClusterChecker('env1')
     checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
+    checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
