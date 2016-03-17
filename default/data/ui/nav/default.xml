@@ -1,4 +1,4 @@
-<nav color="#007395" search_view="search">
+<nav color="#6666ff" search_view="search">
   <view default="true" name="overview"/>
   <view name="configuration"/>
   <!--<collection label="Environment">-->
