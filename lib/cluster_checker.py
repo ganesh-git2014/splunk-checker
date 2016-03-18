@@ -28,6 +28,8 @@ class ClusterChecker(object):
         self.enable_ssl = enable_ssl
         self.enable_shcluster = enable_shcluster
         self.cluster_id = cluster_id
+        # Set the check items at the end of init function.
+        self.check_points = self._set_check_points()
 
     @property
     def all_checkers(self):
@@ -52,8 +54,7 @@ class ClusterChecker(object):
         elif role == 'forwarder':
             self.forwarder_checkers.append(ForwarderChecker(splunk_uri, username, password))
 
-    @property
-    def check_points(self):
+    def _set_check_points(self):
         check_items = list(CHECK_ITEM)
         if not self.enable_cluster:
             check_items.remove('CLUSTER')
@@ -63,11 +64,12 @@ class ClusterChecker(object):
             check_items.remove('SSL')
         return check_items
 
-    def check_all_items(self):
+    def check_all_items(self, return_event=False):
         # TODO: can check the selected items.
         """
         Check all the items for each peer in the cluster.
-        :return: A dict of each item and corresponding result.
+        :return: Two dict of each item and corresponding result. If return_event=True, will transform the results into
+        two lists of event string to return.
         """
         check_result = dict()
         warning_msg = dict()
@@ -80,16 +82,27 @@ class ClusterChecker(object):
             else:
                 warning_msg[item] = self._map_generate_message_method(item)(check_result[item])
 
-        return check_result, warning_msg
+        if return_event:
+            return self.transform_event(check_result, warning_msg)
+        else:
+            return check_result, warning_msg
 
-    def transform_event(self, result):
+    def transform_event(self, check_result, warning_msg):
         """
-        Transform result to string.
+        Transform check result to event string.
         """
-        print_msg = ""
-        print_msg += 'cluster_id={0} '.format(self.cluster_id)
-        print_msg += 'info={0}'.format(json.dumps(result))
-        return print_msg
+        check_result_events = dict()
+        warning_msg_events = dict()
+        for item in self.check_points:
+            event = dict()
+            event['cluster_id'] = self.cluster_id
+            event['info'.format(item)] = check_result[item]
+            check_result_events[item] = json.dumps(event)
+            event = dict()
+            event['cluster_id'] = self.cluster_id
+            event['info'.format(item)] = warning_msg[item]
+            warning_msg_events[item] = json.dumps(event)
+        return check_result_events, warning_msg_events
 
     def _map_check_method(self, item):
         assert item in CHECK_ITEM
@@ -234,6 +247,6 @@ if __name__ == '__main__':
     checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
-    result, warning_msg = checker1.check_all_items()
+    result, warning_msg = checker1.check_all_items(True)
 
     print result

@@ -3,7 +3,6 @@
 @contact: cuyu@splunk.com
 @since: 3/8/16
 '''
-import json
 import sys
 from xml.sax import saxutils
 import xml.etree.ElementTree as ElementTree
@@ -16,7 +15,6 @@ path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 sys.path.append(path_prepend)
 
 from cluster_checker import ClusterChecker
-from constant import CHECK_ITEM
 
 SCHEME = """<scheme>
     <title>splunk checker</title>
@@ -95,21 +93,22 @@ def run():
     checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
-    result, warning_messages = checker1.check_all_items()
+    result, warning_messages = checker1.check_all_items(return_event=True)
 
-    checker2 = ClusterChecker('env2')
+    checker2 = ClusterChecker('env2', replication_factor=3, search_factor=2)
     checker2.add_peer('https://qa-systest-04.sv.splunk.com:1901', 'master', 'admin', 'changed')
     checker2.add_peer('https://qa-systest-05.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
     checker2.add_peer('https://qa-systest-01.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
     checker2.add_peer('https://qa-systest-02.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
-    result2, warning_messages2 = checker2.check_all_items()
+    result2, warning_messages2 = checker2.check_all_items(return_event=True)
     init_stream()
-    send_data(checker1.transform_event(result), 'check_stats', 'check_stats')
     for item in checker1.check_points:
-        send_data(checker1.transform_event(warning_messages[item]), 'warning_msg', item)
-    send_data(checker2.transform_event(result2), 'check_stats', 'check_stats')
+        send_data(result[item], 'check_stats', item)
+        send_data(warning_messages[item], 'warning_msg', item)
+
     for item in checker2.check_points:
-        send_data(checker2.transform_event(warning_messages2[item]), 'warning_msg', item)
+        send_data(result2[item], 'check_stats', item)
+        send_data(warning_messages2[item], 'warning_msg', item)
     fini_stream()
 
 
