@@ -15,6 +15,7 @@ path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 sys.path.append(path_prepend)
 
 from cluster_checker import ClusterChecker
+from kvstore_helper import KVStoreHelper
 
 SCHEME = """<scheme>
     <title>splunk checker</title>
@@ -81,34 +82,29 @@ def do_scheme():
 def run():
     # Read the settings
     config_xml = sys.stdin.read()
-    # config_parsed = ElementTree.fromstring(config_xml)
-    # for element in config_parsed.findall('.//param'):
-    #     if element.attrib['name'] == 'folder':
-    #         if element.text is not None:
-    #             folder_path = element.text
+    config_parsed = ElementTree.fromstring(config_xml)
+    session_key = config_parsed.findall('.//session_key')[0].text
+    server_uri = config_parsed.findall('.//server_uri')[0].text
+    helper = KVStoreHelper(session_key)
+    cluster_info_list = helper.get_cluster_info(
+        os.path.join(server_uri, 'servicesNS/nobody/splunk-checker/storage/collections/data/clusterinfo'))
 
-    checker1 = ClusterChecker('env1')
-    checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
-    result, warning_messages = checker1.check_all_items(return_event=True)
+    # Init all checkers.
+    checker_list = []
+    for cluster_info in cluster_info_list:
+        checker = ClusterChecker(cluster_info['id'])
+        for peer_uri in cluster_info['cluster'].keys():
+            peer_info = cluster_info['cluster'][peer_uri]
+            checker.add_peer(peer_uri, peer_info['role'], peer_info['username'], peer_info['password'])
+        checker_list.append(checker)
 
-    checker2 = ClusterChecker('env2', replication_factor=3, search_factor=2)
-    checker2.add_peer('https://qa-systest-04.sv.splunk.com:1901', 'master', 'admin', 'changed')
-    checker2.add_peer('https://qa-systest-05.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
-    checker2.add_peer('https://qa-systest-01.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
-    checker2.add_peer('https://qa-systest-02.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
-    result2, warning_messages2 = checker2.check_all_items(return_event=True)
+    # Send events.
     init_stream()
-    for item in checker1.check_points:
-        send_data(result[item], 'check_stats', item)
-        send_data(warning_messages[item], 'warning_msg', item)
-
-    for item in checker2.check_points:
-        send_data(result2[item], 'check_stats', item)
-        send_data(warning_messages2[item], 'warning_msg', item)
+    for checker in checker_list:
+        result, warning_messages = checker.check_all_items(return_event=True)
+        for item in checker.check_points:
+            send_data(result[item], 'check_stats', item)
+            send_data(warning_messages[item], 'warning_msg', item)
     fini_stream()
 
 

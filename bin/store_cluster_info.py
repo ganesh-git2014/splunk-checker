@@ -19,6 +19,10 @@ class StoreCluster(admin.MConfigHandler):
     def setup(self):
         if self.requestedAction == admin.ACTION_CREATE:
             self.supportedArgs.addReqArg('cluster_id')
+            self.supportedArgs.addReqArg('enable_cluster')
+            self.supportedArgs.addReqArg('enable_shcluster')
+            self.supportedArgs.addReqArg('replication_factor')
+            self.supportedArgs.addReqArg('search_factor')
             self.supportedArgs.addReqArg('splunk_uri')
             self.supportedArgs.addReqArg('username')
             self.supportedArgs.addReqArg('password')

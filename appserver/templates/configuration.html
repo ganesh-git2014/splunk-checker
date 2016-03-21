@@ -66,28 +66,29 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
 <body>
     <h3>Configure Environment for Splunk Checker</h3>
 
-    <p>Cluster ID</p>
-    <input id="cluster_id">
-
-    <p>Please input splunk uri (e.g. https://systest-auto-idx1:1901):</p>
-    <input id="splunk_uri">
-
-    <p>Username:</p>
-    <input id="username">
-
-    <p>Role:</p>
-    <form action="action_page.php">
-      <select id="role_select" name="role">
+    <form>
+        Cluster ID:<br>
+        <input type="text" id="cluster_id"><br>
+        Please input splunk uri (e.g. https://systest-auto-idx1:1901):<br>
+        <input type="checkbox" id="enable_cluster" checked>Enable cluster<br>
+        <div id="rf_sf">
+        RF=<input type="number" id="rf">SF=<input type="number" id="sf"><br>
+        </div>
+        <input type="checkbox" id="enable_shcluster" checked>Enable search head cluster<br>
+        <input id="splunk_uri"><br>
+        Username:<br>
+        <input id="username"><br>
+        Password:<br>
+        <input id="password"><br>
+        Role:<br>
+        <select id="role_select" label="role">
         <option value="master">Master</option>
         <option value="indexer">Indexer</option>
         <option value="searchhead">Search Head</option>
         <option value="forwarder">Forwarder</option>
-      </select>
-      <br><br>
+        </select><br>
+        <input type="submit" id="add_peer_btn" value="Add Peer!">
     </form>
-
-    <p>Password:</p>
-    <input id="password">
 
     <!--Splunk will put the files under appserver/static/ to someplace like this-->
     <!--<script src="/static/app/splunk-checker/configuration.js"></script>-->
@@ -121,26 +122,41 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     <script>
         require(['jquery','splunkjs/mvc/headerview'], function($){
             $(document).ready(function(){
-                $("button").click(function(){
+                $("#enable_cluster").click(function(){
+                    $("#rf_sf").toggle(this.checked);
+                });
+                $("#add_peer_btn").click(function(){
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
                         type: 'POST',
                         data: {
                             name: "test",
                             cluster_id: $("#cluster_id").val(),
+                            enable_cluster: $("#enable_cluster").val(),
+                            enable_shcluster: $("#enable_shcluster").val(),
+                            replication_factor: $("#rf").val(),
+                            search_factor: $("#sf").val(),
                             splunk_uri: $("#splunk_uri").val(),
                             username: $("#username").val(),
                             password: $("#password").val(),
                             role: $("#role_select").val()
                         }
                     });
+//                    $.ajax({
+//                        url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
+//                        type: 'GET',
+//                        success: function (data){
+//                            //TODO: 1.use a loop to display. 2.input validation.
+//                            $("#rest_info").text(data.entry[0].content.cluster_info);
+//                        }
+//                    });
                 });
             });
         });
     </script>
-    <button type="button">Add peer!</button>
     <p id="add_success"></p>
 
+    <p>Cluster Info from REST:</p>
     <p id="rest_info"></p>
 </body>
 </html>

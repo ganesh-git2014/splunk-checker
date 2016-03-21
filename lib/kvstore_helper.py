@@ -1,8 +1,3 @@
-'''_
-@author: Curtis Yu
-@contact: cuyu@splunk.com
-@since: 12/29/15
-'''
 import json
 import os
 import requests
