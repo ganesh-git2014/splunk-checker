@@ -66,26 +66,27 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
 <body>
     <h3>Configure Environment for Splunk Checker</h3>
 
-    <form>
+    <form id="cluster_info">
         Cluster ID:<br>
-        <input type="text" id="cluster_id"><br>
-        Please input splunk uri (e.g. https://systest-auto-idx1:1901):<br>
-        <input type="checkbox" id="enable_cluster" checked>Enable cluster<br>
+        <input id="cluster_id" required><br>
+        <input type="checkbox" id="enable_cluster" value="True" checked>Enable cluster<br>
         <div id="rf_sf">
-        RF=<input type="number" id="rf">SF=<input type="number" id="sf"><br>
+        RF=<input type="number" min="1" id="rf" required>SF=<input type="number" min="1" id="sf" required><br>
         </div>
-        <input type="checkbox" id="enable_shcluster" checked>Enable search head cluster<br>
-        <input id="splunk_uri"><br>
+        <input type="checkbox" id="enable_shcluster" value="True" checked>Enable search head cluster<br>
+        Please input splunk uri (e.g. https://systest-auto-idx1:1901):<br>
+        <input id="splunk_uri" type="url" required><br>
         Username:<br>
-        <input id="username"><br>
+        <input id="username" required><br>
         Password:<br>
-        <input id="password"><br>
+        <input id="password" required><br>
         Role:<br>
-        <select id="role_select" label="role">
-        <option value="master">Master</option>
-        <option value="indexer">Indexer</option>
-        <option value="searchhead">Search Head</option>
-        <option value="forwarder">Forwarder</option>
+        <select id="role_select">
+            <option selected disabled hidden style='display: none' value=''></option>
+            <option value="master">Master</option>
+            <option value="indexer">Indexer</option>
+            <option value="searchhead">Search Head</option>
+            <option value="forwarder">Forwarder</option>
         </select><br>
         <input type="submit" id="add_peer_btn" value="Add Peer!">
     </form>
@@ -124,8 +125,41 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
             $(document).ready(function(){
                 $("#enable_cluster").click(function(){
                     $("#rf_sf").toggle(this.checked);
+                    if (this.checked) {
+                        this.value = "True";
+                    }
+                    else{
+                        this.value = "False";
+                    }
                 });
+                $("#enable_shcluster").click(function(){
+                    if (this.checked) {
+                        this.value = "True";
+                    }
+                    else{
+                        this.value = "False";
+                    }
+                });
+                // Keep the input value after submit.
+                $("#cluster_id").val(localStorage.getItem("cluster_id"));
+                $("#enable_cluster").val(localStorage.getItem("enable_cluster"));
+                $("#enable_shcluster").val(localStorage.getItem("enable_shcluster"));
+                $("#rf").val(localStorage.getItem("rf"));
+                $("#sf").val(localStorage.getItem("sf"));
+
                 $("#add_peer_btn").click(function(){
+                    // Valid inputs.
+                    var check_inputs = [$('#cluster_id'), $('#rf'), $('#sf'), $('#splunk_uri'), $('#username'), $('#password')];
+                    for (var i = 0, len = check_inputs.length; i<len; ++i) {
+                        if (!check_inputs[i].val()){
+                            return;
+                        }
+                    }
+                    if (!$('#role_select').val()) {
+                        alert('Please select the role!');
+                        return;
+                    }
+                    // Send the info.
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
                         type: 'POST',
@@ -142,6 +176,12 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             role: $("#role_select").val()
                         }
                     });
+                    // Set the inputs using localStorage.
+                    localStorage.setItem("cluster_id", $("#cluster_id").val());
+                    localStorage.setItem("enable_cluster", $("#enable_cluster").val());
+                    localStorage.setItem("enable_shcluster", $("#enable_shcluster").val());
+                    localStorage.setItem("rf", $("#rf").val());
+                    localStorage.setItem("sf", $("#sf").val());
 //                    $.ajax({
 //                        url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
 //                        type: 'GET',

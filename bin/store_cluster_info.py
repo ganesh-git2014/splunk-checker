@@ -41,7 +41,7 @@ class StoreCluster(admin.MConfigHandler):
         content = helper.get_cluster_info(uri + 'servicesNS/nobody/splunk-checker/storage/collections/data/clusterinfo')
         # TODO: transform to confInfo
         for cluster_info in content:
-            confInfo[cluster_info['id']]['cluster_info'] = json.dumps(cluster_info)
+            confInfo[cluster_info['cluster_id']]['cluster_info'] = json.dumps(cluster_info)
 
     def handleCreate(self, confInfo):
         post_data = self.callerArgs.data
@@ -49,15 +49,18 @@ class StoreCluster(admin.MConfigHandler):
         splunk_uri = post_data['splunk_uri'][0]
         splunk_info = dict()
         splunk_info[splunk_uri] = dict()
+        cluster_info = dict()
         for item in post_data.keys():
             if item != 'cluster_id':
                 confInfo[cluster_id][item] = post_data[item][0]
+        cluster_items = ['cluster_id', 'enable_cluster', 'enable_shcluster', 'replication_factor', 'search_factor']
         for item in post_data.keys():
-            if item != 'cluster_id' and item != 'splunk_uri':
+            if item in cluster_items:
+                cluster_info[item] = post_data[item][0]
+            elif item != 'splunk_uri':
                 splunk_info[splunk_uri][item] = post_data[item][0]
-        cluster_info = dict()
-        cluster_info['id'] = cluster_id
-        cluster_info['cluster'] = splunk_info
+
+        cluster_info['peers'] = splunk_info
         helper = KVStoreHelper(self.getSessionKey())
         uri = rest.makeSplunkdUri()
         helper.update_cluster_info(uri + 'servicesNS/nobody/splunk-checker/storage/collections/data/clusterinfo',

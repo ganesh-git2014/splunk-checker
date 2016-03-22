@@ -10,14 +10,14 @@ class KVStoreHelper(object):
         self._json_header = {'Authorization': 'Splunk %s' % self._session_key, 'Content-Type': 'application/json'}
 
     def update_cluster_info(self, endpoint, cluster_info):
-        content = self._find_kvpair_by_id(endpoint, cluster_info['id'])
+        content = self._find_kvpair_by_id(endpoint, cluster_info['cluster_id'])
         if content:
             _key = content['_key']
             new_endpoint = os.path.join(endpoint, _key)
             content.pop('_key')
             content.pop('_user')
-            splunk_uri = cluster_info['cluster'].keys()[0]
-            content['cluster'][splunk_uri] = cluster_info['cluster'][splunk_uri]
+            splunk_uri = cluster_info['peers'].keys()[0]
+            content['peers'][splunk_uri] = cluster_info['peers'][splunk_uri]
             data = json.dumps(content)
         else:
             new_endpoint = endpoint
@@ -49,7 +49,7 @@ class KVStoreHelper(object):
         _key = ''
         content = {}
         for kvpair in parsed_response:
-            if id == kvpair['id']:
+            if id == kvpair['cluster_id']:
                 assert _key == '', 'multi values correspond to the specific cluster id: {key}'.format(key=id)
                 _key = kvpair['_key']
                 content = kvpair

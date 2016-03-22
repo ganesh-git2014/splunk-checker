@@ -92,9 +92,12 @@ def run():
     # Init all checkers.
     checker_list = []
     for cluster_info in cluster_info_list:
-        checker = ClusterChecker(cluster_info['id'])
-        for peer_uri in cluster_info['cluster'].keys():
-            peer_info = cluster_info['cluster'][peer_uri]
+        enable_shcluster = True if cluster_info['enable_shcluster'] == 'True' else False
+        enable_cluster = True if cluster_info['enable_cluster'] == 'True' else False
+        checker = ClusterChecker(cluster_info['cluster_id'], enable_shcluster, enable_cluster,
+                                 int(cluster_info['search_factor']), int(cluster_info['replication_factor']))
+        for peer_uri in cluster_info['peers'].keys():
+            peer_info = cluster_info['peers'][peer_uri]
             checker.add_peer(peer_uri, peer_info['role'], peer_info['username'], peer_info['password'])
         checker_list.append(checker)
 
