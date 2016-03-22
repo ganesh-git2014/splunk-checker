@@ -69,6 +69,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     <form id="cluster_info">
         Cluster ID:<br>
         <input id="cluster_id" required><br>
+        <!--The 'value' tag here seems not work!-->
         <input type="checkbox" id="enable_cluster" value="True" checked>Enable cluster<br>
         <div id="rf_sf">
         RF=<input type="number" min="1" id="rf" required>SF=<input type="number" min="1" id="sf" required><br>
@@ -140,13 +141,22 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         this.value = "False";
                     }
                 });
-                // Keep the input value after submit.
-                $("#cluster_id").val(localStorage.getItem("cluster_id"));
-                $("#enable_cluster").val(localStorage.getItem("enable_cluster"));
-                $("#enable_shcluster").val(localStorage.getItem("enable_shcluster"));
-                $("#rf").val(localStorage.getItem("rf"));
-                $("#sf").val(localStorage.getItem("sf"));
 
+                // Display the stored cluster info.
+                $.ajax({
+                    url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
+                    type: 'GET',
+                    success: function (data){
+                        //TODO: input validation.
+                        var output = "";
+                        for (var i=0; i < data.entry.length; ++i){
+                            output += data.entry[i].content.cluster_info;
+                        }
+                        $("#rest_info").text(output)
+                    }
+                });
+
+                // Handle submit button.
                 $("#add_peer_btn").click(function(){
                     // Valid inputs.
                     var check_inputs = [$('#cluster_id'), $('#rf'), $('#sf'), $('#splunk_uri'), $('#username'), $('#password')];
@@ -159,6 +169,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         alert('Please select the role!');
                         return;
                     }
+
                     // Send the info.
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
@@ -176,21 +187,26 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             role: $("#role_select").val()
                         }
                     });
+
                     // Set the inputs using localStorage.
                     localStorage.setItem("cluster_id", $("#cluster_id").val());
                     localStorage.setItem("enable_cluster", $("#enable_cluster").val());
                     localStorage.setItem("enable_shcluster", $("#enable_shcluster").val());
                     localStorage.setItem("rf", $("#rf").val());
                     localStorage.setItem("sf", $("#sf").val());
-//                    $.ajax({
-//                        url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
-//                        type: 'GET',
-//                        success: function (data){
-//                            //TODO: 1.use a loop to display. 2.input validation.
-//                            $("#rest_info").text(data.entry[0].content.cluster_info);
-//                        }
-//                    });
                 });
+                if (!localStorage.getItem("enable_cluster")){
+                    localStorage.setItem("enable_cluster", "True");
+                }
+                if (!localStorage.getItem("enable_shcluster")){
+                    localStorage.setItem("enable_shcluster", "True");
+                }
+                // Keep the input value after submit.
+                $("#cluster_id").val(localStorage.getItem("cluster_id"));
+                $("#enable_cluster").val(localStorage.getItem("enable_cluster"));
+                $("#enable_shcluster").val(localStorage.getItem("enable_shcluster"));
+                $("#rf").val(localStorage.getItem("rf"));
+                $("#sf").val(localStorage.getItem("sf"));
             });
         });
     </script>

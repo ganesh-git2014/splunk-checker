@@ -244,7 +244,7 @@ if __name__ == '__main__':
     checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
+    checker1.add_peer('https://systest-auto-idx2:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
     result, warning_msg = checker1.check_all_items(True)

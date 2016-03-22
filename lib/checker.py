@@ -53,7 +53,7 @@ class Checker(object):
         """
         uri = self.splunk_uri + '/services/auth/login'
         body = {'username': self.username, 'password': self.password}
-        response = requests.post(uri, data=body, verify=False)
+        response = requests.post(uri, data=body, verify=False, timeout=10)
 
         if response.status_code != 200:
             raise Exception('getSessionKey - unable to login; check credentials')
@@ -68,7 +68,7 @@ class Checker(object):
             raise HTTPException('SKIP')
         assert endpoint.startswith('/')
         uri = self.splunk_uri + endpoint
-        response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False)
+        response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False, timeout=10)
         parsed_response = response.json()
         if response.status_code == 200:
             return parsed_response
