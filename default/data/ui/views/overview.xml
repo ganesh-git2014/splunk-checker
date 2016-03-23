@@ -5,7 +5,7 @@
       <title>Environment check result</title>
       <table id="overview_status_table">
         <search>
-          <query>index="splunk_checker" source="warning_msg" | rename info{} as messages | table sourcetype, cluster_id, messages | dedup cluster_id, sourcetype sortby _time | eval Warning = if(isnull(messages), "No", "Yes") | stats count by cluster_id, Warning | regex Warning="Yes" | eval Status = if(count == 0, "low", "severe") | fields cluster_id, Status</query>
+          <query>index="splunk_checker" source="warning_msg" | rename info{} as messages | table sourcetype, cluster_id, messages | dedup cluster_id, sourcetype sortby _time | eval Warning = if(isnull(messages), 0, 1) | stats sum(Warning) as warning_num by cluster_id | eval Status = if(warning_num==0, "low", "severe") | fields cluster_id, Status</query>
           <earliest>-15m</earliest>
           <latest>now</latest>
         </search>

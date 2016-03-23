@@ -13,6 +13,7 @@ If the default REST info acquired by each splunk checker class(e.g. `IndexerChec
 ## TODO List
 
 - Support for multi-site cluster
+- Support for more roles: e.g. deployer, deployment server
 - We assume all the search head in the same SHC, but there's more complex situation
 - Check for ssl
 - Check for normal conf settings
