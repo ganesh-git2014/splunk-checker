@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ElementTree
 import os
 
 # Why cannot import from lib (as package) directly?
+import time
 
 path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
 sys.path.append(path_prepend)
@@ -86,8 +87,17 @@ def run():
     session_key = config_parsed.findall('.//session_key')[0].text
     server_uri = config_parsed.findall('.//server_uri')[0].text
     helper = KVStoreHelper(session_key)
-    cluster_info_list = helper.get_cluster_info(
-        os.path.join(server_uri, 'servicesNS/nobody/splunk-checker/storage/collections/data/clusterinfo'))
+    # Wait until mangodb starts.
+    for i in xrange(10):
+        try:
+            cluster_info_list = helper.get_cluster_info(
+                os.path.join(server_uri, 'servicesNS/nobody/splunk-checker/storage/collections/data/clusterinfo'))
+        except:
+            time.sleep(10)
+        else:
+            break
+    else:
+        raise Exception('Failed to get cluster info from kvstore.')
 
     # Init all checkers.
     checker_list = []
