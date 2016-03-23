@@ -184,12 +184,12 @@ class ClusterChecker(object):
                     if license['expiration_time'] - int(now) > th_time:
                         break
                 else:
-                    msg_list.append('All the licenses have expired.(Or will expire soon.)')
+                    msg_list.append('All the licenses have expired(Or will expire soon) on [{0}]'.format(uri))
                 # Check if the license usage is hitting the limit.
                 # Set the threshold to about 1 GB
                 th_quota = 100000
                 if check_result[uri]['usage']['quota'] - check_result[uri]['usage']['slaves_usage_bytes'] < th_quota:
-                    msg_list.append('The usage of the license is hitting the quota.')
+                    msg_list.append('The usage of the license is hitting the quota on [{0}].'.format(uri))
 
         return msg_list
 
