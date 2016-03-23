@@ -16,8 +16,14 @@ class KVStoreHelper(object):
             new_endpoint = os.path.join(endpoint, _key)
             content.pop('_key')
             content.pop('_user')
-            splunk_uri = cluster_info['peers'].keys()[0]
-            content['peers'][splunk_uri] = cluster_info['peers'][splunk_uri]
+            peer_info = cluster_info['peers'][0]
+            splunk_uri = peer_info['splunk_uri']
+            for i in range(len(content['peers'])):
+                if content['peers'][i]['splunk_uri'] == splunk_uri:
+                    content['peers'][i] = peer_info
+                    break
+            else:
+                content['peers'].append(peer_info)
             data = json.dumps(content)
         else:
             new_endpoint = endpoint

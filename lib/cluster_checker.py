@@ -212,7 +212,9 @@ class ClusterChecker(object):
 
     def _generate_shcluster_message(self, check_result):
         msg_list = []
-        assert len(check_result) > 1
+        if len(check_result) < 3:
+            msg_list.append('The check is skipped due to: The number of search head in SHC should be more than 3.')
+            return msg_list
         # Check the captain id is the same from all search heads(so that in the same bundle)
         captain_id = check_result[self.searchhead_checkers[0].splunk_uri]['captain']['id']
         for checker in self.searchhead_checkers:

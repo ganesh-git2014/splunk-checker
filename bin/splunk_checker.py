@@ -96,18 +96,24 @@ def run():
         enable_cluster = True if cluster_info['enable_cluster'] == 'True' else False
         checker = ClusterChecker(cluster_info['cluster_id'], enable_shcluster, enable_cluster,
                                  int(cluster_info['search_factor']), int(cluster_info['replication_factor']))
-        for peer_uri in cluster_info['peers'].keys():
-            peer_info = cluster_info['peers'][peer_uri]
-            checker.add_peer(peer_uri, peer_info['role'], peer_info['username'], peer_info['password'])
+        for peer_info in cluster_info['peers']:
+            checker.add_peer(peer_info['splunk_uri'], peer_info['role'], peer_info['username'], peer_info['password'])
         checker_list.append(checker)
 
     # Send events.
+    result = dict()
+    warning_messages = dict()
+    for checker in checker_list:
+        result[checker], warning_messages[checker] = checker.check_all_items(return_event=True)
+
     init_stream()
     for checker in checker_list:
-        result, warning_messages = checker.check_all_items(return_event=True)
         for item in checker.check_points:
-            send_data(result[item], 'check_stats', item)
-            send_data(warning_messages[item], 'warning_msg', item)
+            if result[checker]:
+                send_data(result[checker][item], 'check_stats', item)
+                send_data(warning_messages[checker][item], 'warning_msg', item)
+            else:
+                send_data('Exception occurs when checking this cluster.', 'warning_msg', item)
     fini_stream()
 
 

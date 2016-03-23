@@ -46,9 +46,7 @@ class StoreCluster(admin.MConfigHandler):
     def handleCreate(self, confInfo):
         post_data = self.callerArgs.data
         cluster_id = post_data['cluster_id'][0]
-        splunk_uri = post_data['splunk_uri'][0]
         splunk_info = dict()
-        splunk_info[splunk_uri] = dict()
         cluster_info = dict()
         for item in post_data.keys():
             if item != 'cluster_id':
@@ -57,10 +55,11 @@ class StoreCluster(admin.MConfigHandler):
         for item in post_data.keys():
             if item in cluster_items:
                 cluster_info[item] = post_data[item][0]
-            elif item != 'splunk_uri':
-                splunk_info[splunk_uri][item] = post_data[item][0]
+            else:
+                splunk_info[item] = post_data[item][0]
 
-        cluster_info['peers'] = splunk_info
+        cluster_info['peers'] = []
+        cluster_info['peers'].append(splunk_info)
         helper = KVStoreHelper(self.getSessionKey())
         uri = rest.makeSplunkdUri()
         helper.update_cluster_info(uri + 'servicesNS/nobody/splunk-checker/storage/collections/data/clusterinfo',
