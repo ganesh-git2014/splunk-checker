@@ -6,7 +6,7 @@
       <table id="overview_status_table">
         <search>
           <query>index="splunk_checker" source="warning_msg" | rename info{} as messages | table sourcetype, cluster_id, messages | dedup cluster_id, sourcetype sortby _time | eval Warning = if(isnull(messages), 0, 1) | stats sum(Warning) as warning_num by cluster_id | eval Status = if(warning_num==0, "low", "severe") | fields cluster_id, Status</query>
-          <earliest>-15m</earliest>
+          <earliest>-60m@m</earliest>
           <latest>now</latest>
         </search>
         <option name="wrap">true</option>
@@ -24,7 +24,7 @@
         <label>Cluster Name</label>
         <search>
           <query>index="splunk_checker" | stats count by cluster_id</query>
-          <earliest>-12h@h</earliest>
+          <earliest>-60m@m</earliest>
           <latest>now</latest>
         </search>
         <fieldForLabel>cluster_id</fieldForLabel>
@@ -33,7 +33,7 @@
       <table id="cluster_status_table">
         <search>
           <query>index="splunk_checker" source="warning_msg" cluster_id=$cluster_id$  | rename info{} as "Warnings", sourcetype as "Item"| table Item, Warnings | dedup Item sortby -_time | eval Status=case(isnull(Warnings), "low", like(Warnings,"%The check is skipped%"), "unknown", 1==1, "severe")</query>
-          <earliest>-15m</earliest>
+          <earliest>-60m@m</earliest>
           <latest>now</latest>
         </search>
         <option name="drilldown">row</option>
