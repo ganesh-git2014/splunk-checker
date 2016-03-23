@@ -148,11 +148,11 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                     type: 'GET',
                     success: function (data){
                         //TODO: input validation.
-                        var output = "";
-                        for (var i=0; i < data.entry.length; ++i){
-                            output += data.entry[i].content.cluster_info;
+                        for (var i=0; i < data.entry.length; ++i) {
+                            var json_obj = JSON.parse(data.entry[i].content.cluster_info);
+                            var output = JSON.stringify(json_obj, null, 4);
+                            $("#info_list").append("<li><pre>"+output+"</pre></li>")
                         }
-                        $("#rest_info").text(output)
                     }
                 });
 
@@ -213,6 +213,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     <p id="add_success"></p>
 
     <p>Cluster Info from REST:</p>
-    <p id="rest_info"></p>
+    <ul id="info_list">
+    </ul>
 </body>
 </html>
