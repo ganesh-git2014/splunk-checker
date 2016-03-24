@@ -1,4 +1,29 @@
 <form>
   <label>Check Stats</label>
-
+  <row>
+    <panel>
+      <title>Splunk Version Info</title>
+      <input type="dropdown" token="cluster_id" searchWhenChanged="true">
+        <search>
+          <query>index="splunk_checker" | stats count by cluster_id</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+        </search>
+        <fieldForLabel>cluster_id</fieldForLabel>
+        <fieldForValue>cluster_id</fieldForValue>
+      </input>
+      <table>
+        <search>
+          <query>index="splunk_checker" source=check_stats cluster_id=$cluster_id$ sourcetype=SPLUNK_STATUS | head 1 | rename info{}.splunk_uri as splunk_uri, info{}.server_info.version as version, info{}.server_info.build as build | table splunk_uri, version, build</query>
+          <earliest>0</earliest>
+          <latest></latest>
+        </search>
+        <option name="wrap">undefined</option>
+        <option name="rowNumbers">undefined</option>
+        <option name="drilldown">row</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+  </row>
 </form>

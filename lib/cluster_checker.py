@@ -71,38 +71,38 @@ class ClusterChecker(object):
         :return: Two dict of each item and corresponding result. If return_event=True, will transform the results into
         two lists of event string to return.
         """
-        check_result = dict()
+        check_results = dict()
         warning_msg = dict()
 
         for item in self.check_points:
-            check_result[item] = self._map_check_method(item)()
-            exception_msg = self._check_http_exception(check_result[item])
+            check_results[item] = self._map_check_method(item)()
+            exception_msg = self._check_http_exception(check_results[item])
             if exception_msg:
                 warning_msg[item] = exception_msg
             else:
-                warning_msg[item] = self._map_generate_message_method(item)(check_result[item])
+                warning_msg[item] = self._map_generate_message_method(item)(check_results[item])
 
         if return_event:
-            return self.transform_event(check_result, warning_msg)
+            return self.transform_event(check_results, warning_msg)
         else:
-            return check_result, warning_msg
+            return check_results, warning_msg
 
-    def transform_event(self, check_result, warning_msg):
+    def transform_event(self, check_results, warning_msg):
         """
         Transform check result to event string.
         """
-        check_result_events = dict()
+        check_results_events = dict()
         warning_msg_events = dict()
         for item in self.check_points:
             event = dict()
             event['cluster_id'] = self.cluster_id
-            event['info'.format(item)] = check_result[item]
-            check_result_events[item] = json.dumps(event)
+            event['info'.format(item)] = check_results[item]
+            check_results_events[item] = json.dumps(event)
             event = dict()
             event['cluster_id'] = self.cluster_id
             event['info'.format(item)] = warning_msg[item]
             warning_msg_events[item] = json.dumps(event)
-        return check_result_events, warning_msg_events
+        return check_results_events, warning_msg_events
 
     def _map_check_method(self, item):
         assert item in CHECK_ITEM
@@ -123,119 +123,128 @@ class ClusterChecker(object):
         return method_map[item]
 
     def check_splunk_status(self):
-        check_result = dict()
+        check_results = []
         for checker in self.all_checkers:
-            check_result[checker.splunk_uri] = checker.check_splunk_status()
+            tmp_result = checker.check_splunk_status()
+            tmp_result['splunk_uri'] = checker.splunk_uri
+            check_results.append(tmp_result)
 
-        return check_result
+        return check_results
 
     def check_license(self):
-        check_result = dict()
+        check_results = []
         for checker in self.all_checkers:
-            check_result[checker.splunk_uri] = checker.check_license()
+            tmp_result = checker.check_license()
+            tmp_result['splunk_uri'] = checker.splunk_uri
+            check_results.append(tmp_result)
 
-        return check_result
+        return check_results
 
     def check_cluster(self):
-        check_result = dict()
-        check_result[self.master_checker.splunk_uri] = self.master_checker.check_cluster()
+        check_results = []
+        tmp_result = self.master_checker.check_cluster()
+        tmp_result['splunk_uri'] = self.master_checker.splunk_uri
+        check_results.append(tmp_result)
 
-        return check_result
+        return check_results
 
     def check_ssl(self):
         pass
 
     def check_shcluster(self):
-        check_result = dict()
+        check_results = []
         for checker in self.searchhead_checkers:
-            check_result[checker.splunk_uri] = checker.check_shcluster()
+            tmp_result = checker.check_shcluster()
+            tmp_result['splunk_uri'] = checker.splunk_uri
+            check_results.append(tmp_result)
 
-        return check_result
+        return check_results
 
-    def _generate_splunk_status_message(self, check_result):
+    def _generate_splunk_status_message(self, check_results):
         """
         Transform the concrete result into a rough True or False.
         The return result contains the warning messages(should be a list), if the message list is empty, that means the
         check item is [OK], otherwise it has some problems.
         """
         msg_list = []
-        for uri in check_result.keys():
-            if check_result[uri]['status'] == 'Down':
-                self._add_warning_message(msg_list, '[{0}] is down!'.format(uri), Severity.SEVERE)
+        for result in check_results:
+            if result['status'] == 'Down':
+                self._add_warning_message(msg_list, '[{0}] is down!'.format(result['splunk_uri']), Severity.SEVERE)
         return msg_list
 
-    def _generate_license_message(self, check_result):
+    def _generate_license_message(self, check_results):
         # Start license check.
         msg_list = []
         all_peer_uri = []
         for checker in self.all_checkers:
             all_peer_uri.append(checker.splunk_uri)
-        for uri in check_result.keys():
-            if check_result[uri]['license_master'] != 'self':
+        for result in check_results:
+            if result['license_master'] != 'self':
                 # Check if the license master is one peer of the cluster.
-                if check_result[uri]['license_master'] not in all_peer_uri:
-                    self._add_warning_message(msg_list, 'The license master of [{0}] is not in the cluster'.format(uri),
-                                              Severity.ELEVATED)
+                if result['license_master'] not in all_peer_uri:
+                    self._add_warning_message(msg_list, 'The license master of [{0}] is not in the cluster'.format(
+                        result['splunk_uri']), Severity.ELEVATED)
             else:
                 # Check if all licenses are expired.
                 now = time.time()
                 # Set the threshold to 1 day.
                 th_time = 3600 * 24
-                for license in check_result[uri]['licenses'].values():
+                for license in result['licenses'].values():
                     if license['expiration_time'] - int(now) > th_time:
                         break
                 else:
                     self._add_warning_message(msg_list,
-                                              'All the licenses have expired(Or will expire soon) on [{0}]'.format(uri),
-                                              Severity.SEVERE)
+                                              'All the licenses have expired(Or will expire soon) on [{0}]'.format(
+                                                  result['splunk_uri']), Severity.SEVERE)
                 # Check if the license usage is hitting the limit.
                 # Set the threshold to about 1 GB
                 th_quota = 100000
-                if check_result[uri]['usage']['quota'] - check_result[uri]['usage']['slaves_usage_bytes'] < th_quota:
+                if result['usage']['quota'] - result['usage']['slaves_usage_bytes'] < th_quota:
                     self._add_warning_message(msg_list,
-                                              'The usage of the license is hitting the quota on [{0}].'.format(uri),
-                                              Severity.SEVERE)
+                                              'The usage of the license is hitting the quota on [{0}].'.format(
+                                                  result['splunk_uri']), Severity.SEVERE)
 
         return msg_list
 
-    def _generate_cluster_message(self, check_result):
+    def _generate_cluster_message(self, check_results):
         msg_list = []
         # Check replication factor
-        if check_result[self.master_checker.splunk_uri]['replication_factor'] != self.replication_factor:
+        # todo: support multi-site cluster
+        if check_results[0]['replication_factor'] != self.replication_factor:
             self._add_warning_message(msg_list, 'Replication factor [{0}] is different from defined [{1}].'.format(
-                check_result[self.master_checker.splunk_uri]['replication_factor'],
+                check_results[0]['replication_factor'],
                 self.replication_factor), Severity.SEVERE)
         # Check search factor
-        if check_result[self.master_checker.splunk_uri]['search_factor'] != self.search_factor:
+        if check_results[0]['search_factor'] != self.search_factor:
             self._add_warning_message(msg_list, 'Search factor [{0}] is different from defined [{1}].'.format(
-                check_result[self.master_checker.splunk_uri]['search_factor'], self.search_factor), Severity.SEVERE)
+                check_results[0]['search_factor'], self.search_factor), Severity.SEVERE)
 
         return msg_list
 
     def _generate_ssl_message(self):
         pass
 
-    def _generate_shcluster_message(self, check_result):
+    def _generate_shcluster_message(self, check_results):
         msg_list = []
-        if len(check_result) < 3:
+        if len(check_results) < 3:
             self._add_warning_message(msg_list,
                                       'The check is skipped due to: The number of search head in SHC should be more than 3.',
                                       Severity.UNKNOWN)
             return msg_list
         # Check the captain id is the same from all search heads(so that in the same bundle)
-        captain_id = check_result[self.searchhead_checkers[0].splunk_uri]['captain']['id']
-        for checker in self.searchhead_checkers:
-            if check_result[checker.splunk_uri]['captain']['id'] != captain_id:
+        captain_id = check_results[0]['captain']['id']
+        for result in check_results:
+            if result['captain']['id'] != captain_id:
                 self._add_warning_message(msg_list, 'The captain id is not consistent!', Severity.SEVERE)
                 break
 
         return msg_list
 
-    def _check_http_exception(self, check_result):
+    def _check_http_exception(self, check_results):
         """
         Check if there is http exception messages among the check result.
         """
-        for result in check_result.values():
+        for result in check_results:
             # Fixme: The check method here is not very good.
             if 'is_http_exception' in result and result['is_http_exception'] is True:
                 warning_messages = []
@@ -257,6 +266,11 @@ class ClusterChecker(object):
         """
         message_list.append({'message': message, 'severity': severity})
 
+    def _find_result_by_splunk_uri(self, result_list, splunk_uri):
+        for result in result_list:
+            if result['splunk_uri'] == splunk_uri:
+                return result
+
 
 if __name__ == '__main__':
     checker1 = ClusterChecker('env1')
@@ -266,6 +280,6 @@ if __name__ == '__main__':
     checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
-    result, warning_msg = checker1.check_all_items(True)
+    check_result, warning_msg = checker1.check_all_items(True)
 
-    print result
+    print check_result
