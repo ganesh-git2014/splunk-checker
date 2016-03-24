@@ -160,7 +160,7 @@ class ClusterChecker(object):
         """
         msg_list = []
         for uri in check_result.keys():
-            if check_result[uri] == 'Down':
+            if check_result[uri]['status'] == 'Down':
                 self._add_warning_message(msg_list, '[{0}] is down!'.format(uri), Severity.SEVERE)
         return msg_list
 
@@ -263,7 +263,7 @@ if __name__ == '__main__':
     checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-idx:1901', 'indexer', 'admin', 'changed')
+    checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
     result, warning_msg = checker1.check_all_items(True)

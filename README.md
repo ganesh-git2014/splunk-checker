@@ -2,12 +2,17 @@
 This app is used to check cluster health status.
 
 ## User Guide
+
+### How to use
 It's easy to use:
 
 1. Install the app to splunk
 2. Configure the cluster environments you want to check through configuration page (e.g. <http://localhost:8000/en-US/app/splunk-checker/configuration>)
 3. Wait for some time until next check execution (The default interval is 10min)
 4. Find check results from overview page (e.g. <http://localhost:8000/en-US/app/splunk-checker/overview>)
+
+### The severity of warning messages
+We define 3 different kind of severity, from most severe to least severe: `severe`, `elevated`, `low`. The `low` is defined as nearly normal here, so if a check item comes with no warning messages is also expressed as `low`. Besides, we define a severity as `unknown` for those skipped check items.
 
 ## Dev Guide
 
@@ -37,3 +42,4 @@ If the REST info acquired by each splunk checker class(e.g. `IndexerChecker`) is
 - Can delete/edit cluster info from configuration page
 - ~~Add severity of each warning message~~
 - Add more dashboards for display
+- Control splunk through REST (e.g. restart all splunk in a cluster)

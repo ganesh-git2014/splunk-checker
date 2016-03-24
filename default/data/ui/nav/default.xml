@@ -1,5 +1,6 @@
 <nav color="#6666ff" search_view="search">
   <view default="true" name="overview"/>
+  <view name="check_stats"/>
   <view name="configuration"/>
   <!--<collection label="Environment">-->
     <!--<a href="/app/splunk-checker/splunk_instance">Splunk Instances</a>-->

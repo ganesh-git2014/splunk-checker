@@ -76,13 +76,20 @@ class Checker(object):
             raise HTTPException(response)
 
     def check_splunk_status(self):
+        result = dict()
         try:
             self._password2sessionkey()
         except:
             # TODO: check the difference between status down and wrong credential
-            return 'Down'
+            result['status'] = 'Down'
+            result['server_info'] = None
         else:
-            return 'Up'
+            result['status'] = 'Up'
+            parsed_response = self._request_get('/services/server/info')
+            result['server_info'] = self._select_dict(parsed_response['entry'][0]['content'],
+                                                      ['build', 'guid', 'numberOfVirtualCores', 'physicalMemoryMB',
+                                                       'version'])
+        return result
 
     @catch_http_exception
     def check_ssl(self):
