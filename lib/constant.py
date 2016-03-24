@@ -30,3 +30,10 @@ CHECK_ITEM = frozenset([
     'CLUSTER',
     'SHCLUSTER'
 ])
+
+
+class Severity:
+    UNKNOWN = 'unknown'
+    LOW = 'low'
+    ELEVATED = 'elevated'
+    SEVERE = 'severe'

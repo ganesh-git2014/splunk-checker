@@ -5,7 +5,7 @@
 '''
 import time
 import json
-from constant import SPLUNK_ROLE, CHECK_ITEM
+from constant import SPLUNK_ROLE, CHECK_ITEM, Severity
 from forwarder_checker import ForwarderChecker
 from indexer_checker import IndexerChecker
 from master_checker import MasterChecker
@@ -161,7 +161,7 @@ class ClusterChecker(object):
         msg_list = []
         for uri in check_result.keys():
             if check_result[uri] == 'Down':
-                msg_list.append('[{0}] is down!'.format(uri))
+                self._add_warning_message(msg_list, '[{0}] is down!'.format(uri), Severity.SEVERE)
         return msg_list
 
     def _generate_license_message(self, check_result):
@@ -174,7 +174,8 @@ class ClusterChecker(object):
             if check_result[uri]['license_master'] != 'self':
                 # Check if the license master is one peer of the cluster.
                 if check_result[uri]['license_master'] not in all_peer_uri:
-                    msg_list.append('The license master of [{0}] is not in the cluster'.format(uri))
+                    self._add_warning_message(msg_list, 'The license master of [{0}] is not in the cluster'.format(uri),
+                                              Severity.ELEVATED)
             else:
                 # Check if all licenses are expired.
                 now = time.time()
@@ -184,12 +185,16 @@ class ClusterChecker(object):
                     if license['expiration_time'] - int(now) > th_time:
                         break
                 else:
-                    msg_list.append('All the licenses have expired(Or will expire soon) on [{0}]'.format(uri))
+                    self._add_warning_message(msg_list,
+                                              'All the licenses have expired(Or will expire soon) on [{0}]'.format(uri),
+                                              Severity.SEVERE)
                 # Check if the license usage is hitting the limit.
                 # Set the threshold to about 1 GB
                 th_quota = 100000
                 if check_result[uri]['usage']['quota'] - check_result[uri]['usage']['slaves_usage_bytes'] < th_quota:
-                    msg_list.append('The usage of the license is hitting the quota on [{0}].'.format(uri))
+                    self._add_warning_message(msg_list,
+                                              'The usage of the license is hitting the quota on [{0}].'.format(uri),
+                                              Severity.SEVERE)
 
         return msg_list
 
@@ -197,13 +202,13 @@ class ClusterChecker(object):
         msg_list = []
         # Check replication factor
         if check_result[self.master_checker.splunk_uri]['replication_factor'] != self.replication_factor:
-            msg_list.append('Replication factor [{0}] is different from defined [{1}].'.format(
+            self._add_warning_message(msg_list, 'Replication factor [{0}] is different from defined [{1}].'.format(
                 check_result[self.master_checker.splunk_uri]['replication_factor'],
-                self.replication_factor))
+                self.replication_factor), Severity.SEVERE)
         # Check search factor
         if check_result[self.master_checker.splunk_uri]['search_factor'] != self.search_factor:
-            msg_list.append('Search factor [{0}] is different from defined [{1}].'.format(
-                check_result[self.master_checker.splunk_uri]['search_factor'], self.search_factor))
+            self._add_warning_message(msg_list, 'Search factor [{0}] is different from defined [{1}].'.format(
+                check_result[self.master_checker.splunk_uri]['search_factor'], self.search_factor), Severity.SEVERE)
 
         return msg_list
 
@@ -213,13 +218,15 @@ class ClusterChecker(object):
     def _generate_shcluster_message(self, check_result):
         msg_list = []
         if len(check_result) < 3:
-            msg_list.append('The check is skipped due to: The number of search head in SHC should be more than 3.')
+            self._add_warning_message(msg_list,
+                                      'The check is skipped due to: The number of search head in SHC should be more than 3.',
+                                      Severity.UNKNOWN)
             return msg_list
         # Check the captain id is the same from all search heads(so that in the same bundle)
         captain_id = check_result[self.searchhead_checkers[0].splunk_uri]['captain']['id']
         for checker in self.searchhead_checkers:
             if check_result[checker.splunk_uri]['captain']['id'] != captain_id:
-                msg_list.append('The captain id is not consistent!')
+                self._add_warning_message(msg_list, 'The captain id is not consistent!', Severity.SEVERE)
                 break
 
         return msg_list
@@ -233,12 +240,22 @@ class ClusterChecker(object):
             if 'is_http_exception' in result and result['is_http_exception'] is True:
                 warning_messages = []
                 for msg in result['messages']:
-                    warning_messages.append(
-                        'Http exception occurred at [{url}], warning messages: [{msg}]'.format(url=result['url'],
-                                                                                               msg=msg['text']))
+                    self._add_warning_message(warning_messages,
+                                              'Http exception occurred at [{url}], warning messages: [{msg}]'.format(
+                                                  url=result['url'], msg=msg['text']), Severity.UNKNOWN)
                 return warning_messages
         else:
             return None
+
+    def _add_warning_message(self, message_list, message, severity):
+        """
+        Add the warning msg to the msg list.
+        :param message_list: the msg list
+        :param message: the warning msg
+        :param severity: the severity of the warning msg
+        :return: None
+        """
+        message_list.append({'message': message, 'severity': severity})
 
 
 if __name__ == '__main__':
@@ -246,7 +263,7 @@ if __name__ == '__main__':
     checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-idx2:1901', 'indexer', 'admin', 'changed')
+    checker1.add_peer('https://systest-auto-idx:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
     result, warning_msg = checker1.check_all_items(True)

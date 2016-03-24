@@ -10,7 +10,7 @@ td.icon .severe {
     color: red;
 }
 td.icon .elevated {
-    color: orangered;
+    color: #ffb01d;
 }
 td.icon .low {
     color: #006400;

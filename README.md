@@ -35,4 +35,5 @@ If the REST info acquired by each splunk checker class(e.g. `IndexerChecker`) is
 - Check for ssl
 - Check for normal conf settings
 - Can delete/edit cluster info from configuration page
-- Add severity of each warning message
+- ~~Add severity of each warning message~~
+- Add more dashboards for display
