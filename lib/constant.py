@@ -25,6 +25,7 @@ SPLUNK_ROLE = frozenset([
 
 CHECK_ITEM = frozenset([
     'SPLUNK_STATUS',
+    'DISK_SPACE',
     'SSL',
     'LICENSE',
     'CLUSTER',

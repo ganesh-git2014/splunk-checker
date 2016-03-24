@@ -110,7 +110,8 @@ class ClusterChecker(object):
                       'SSL': self.check_ssl,
                       'LICENSE': self.check_license,
                       'CLUSTER': self.check_cluster,
-                      'SHCLUSTER': self.check_shcluster}
+                      'SHCLUSTER': self.check_shcluster,
+                      'DISK_SPACE': self.check_disk_space}
         return method_map[item]
 
     def _map_generate_message_method(self, item):
@@ -119,7 +120,8 @@ class ClusterChecker(object):
                       'SSL': self._generate_ssl_message,
                       'LICENSE': self._generate_license_message,
                       'CLUSTER': self._generate_cluster_message,
-                      'SHCLUSTER': self._generate_shcluster_message}
+                      'SHCLUSTER': self._generate_shcluster_message,
+                      'DISK_SPACE': self._generate_disk_space_message}
         return method_map[item]
 
     def check_splunk_status(self):
@@ -130,6 +132,25 @@ class ClusterChecker(object):
             check_results.append(tmp_result)
 
         return check_results
+
+    def check_disk_space(self):
+        check_results = []
+        for checker in self.all_checkers:
+            tmp_result = checker.check_disk_space()
+            tmp_result['splunk_uri'] = checker.splunk_uri
+            check_results.append(tmp_result)
+
+        return check_results
+
+    def _generate_disk_space_message(self, check_results):
+        msg_list = []
+        th_space = 4000
+        for result in check_results:
+            if float(result['disk_space']['available']) < th_space:
+                self._add_warning_message(msg_list,
+                                          'The disk space is not enough on [{0}]! Only {1}Mb avaliable.'.format(
+                                              result['splunk_uri'], result['disk_space']['available']), Severity.SEVERE)
+        return msg_list
 
     def check_license(self):
         check_results = []
@@ -280,6 +301,6 @@ if __name__ == '__main__':
     checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
     checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
-    check_result, warning_msg = checker1.check_all_items(True)
+    check_result, warning_msg = checker1.check_all_items(False)
 
     print check_result

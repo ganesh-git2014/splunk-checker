@@ -92,6 +92,13 @@ class Checker(object):
         return result
 
     @catch_http_exception
+    def check_disk_space(self):
+        result = dict()
+        parsed_response = self._request_get('/services/server/status/partitions-space')
+        result['disk_space'] = self._select_dict(parsed_response['entry'][0]['content'], ['available', 'capacity'])
+        return result
+
+    @catch_http_exception
     def check_ssl(self):
         pass
 
