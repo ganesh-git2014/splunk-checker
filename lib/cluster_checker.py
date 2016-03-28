@@ -223,7 +223,7 @@ class ClusterChecker(object):
                 if result['usage']['quota'] - result['usage']['slaves_usage_bytes'] < th_quota:
                     self._add_warning_message(msg_list,
                                               'The usage of the license is hitting the quota on [{0}].'.format(
-                                                  result['splunk_uri']), Severity.SEVERE)
+                                                  result['splunk_uri']), Severity.ELEVATED)
 
         return msg_list
 
