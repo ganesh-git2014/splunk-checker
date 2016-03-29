@@ -1,29 +1,73 @@
 <form>
   <label>Check Stats</label>
+  <fieldset submitButton="false">
+    <input type="dropdown" token="cluster_id" searchWhenChanged="true">
+      <search>
+        <query>index="splunk_checker" | stats count by cluster_id</query>
+        <earliest>-60m@m</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>cluster_id</fieldForLabel>
+      <fieldForValue>cluster_id</fieldForValue>
+    </input>
+  </fieldset>
   <row>
     <panel>
-      <title>Splunk Version Info</title>
-      <input type="dropdown" token="cluster_id" searchWhenChanged="true">
+      <table>
+        <title>Splunk Version Info</title>
         <search>
-          <query>index="splunk_checker" | stats count by cluster_id</query>
+          <query>index="splunk_checker" source=check_stats cluster_id=$cluster_id$ sourcetype=SPLUNK_STATUS | head 1 | rename info{}.splunk_uri as splunk_uri, info{}.server_info.version as version, info{}.server_info.build as build | table _raw | spath info{} | mvexpand info{} | spath input=info{} | rename server_info.build as build, server_info.version as version, server_info.guid as guid | fields splunk_uri, version, build, guid, status | fields - _raw</query>
           <earliest>-60m@m</earliest>
           <latest>now</latest>
         </search>
-        <fieldForLabel>cluster_id</fieldForLabel>
-        <fieldForValue>cluster_id</fieldForValue>
-      </input>
-      <table>
-        <search>
-          <query>index="splunk_checker" source=check_stats cluster_id=$cluster_id$ sourcetype=SPLUNK_STATUS | head 1 | rename info{}.splunk_uri as splunk_uri, info{}.server_info.version as version, info{}.server_info.build as build | table splunk_uri, version, build</query>
-          <earliest>0</earliest>
-          <latest></latest>
-        </search>
         <option name="wrap">undefined</option>
         <option name="rowNumbers">undefined</option>
-        <option name="drilldown">row</option>
         <option name="dataOverlayMode">none</option>
+        <option name="list.drilldown">full</option>
+        <option name="list.wrap">1</option>
+        <option name="maxLines">5</option>
+        <option name="raw.drilldown">full</option>
+        <option name="table.drilldown">all</option>
+        <option name="table.wrap">1</option>
+        <option name="type">list</option>
+        <option name="drilldown">row</option>
         <option name="count">10</option>
       </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Disk Usage Info</title>
+        <search>
+          <query>index="splunk_checker" source=check_stats cluster_id=$cluster_id$ sourcetype=DISK_SPACE | head 1 | table _raw | spath info{} input=_raw | mvexpand info{} | spath input=info{} | convert num(disk_space.capacity) as capacity, num(disk_space.available) as available | eval used=capacity-available | fields splunk_uri, available, used</query>
+          <earliest>-60m@m</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
     </panel>
   </row>
 </form>
