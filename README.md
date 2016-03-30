@@ -12,16 +12,37 @@ It's easy to use:
 4. Find check results from overview page (e.g. <http://localhost:8000/en-US/app/splunk-checker/overview>)
 
 ### The check points
-For now, these check points are supported for checking:
+For now, these check points are supported for checking (The stats of each check point can be find using SPL: `index=splunk_checker source=check_stats`):
 
 - **SPLUNK_STATUS** 
-	- splunk status (Up/Down)
-	- splunk server info (e.g. version, guid, build, etc.)
+	- Check if all splunk are in status 'Up'
 - **CLUSTER**
+	- Check if replication factor is same as defined
+	- Check if search factor is same as defined
 - **SHCLUSTER**
+	- Check if the number of search heads is more than 3
+	- Check if the captain is the same one from all search heads
 - **LICENSE**
-- **DISK_SPACE**
+	- Check if the license master is in the cluster (for license slave)
+	- Check if all licenses are about to expire (for license master)
+	- Check if the license usage is hitting the quota (for license master)
+- **RESOURCE_USAGE**
+	- Check if disk space is enough
+	- Check if memory usage is too high
+	- Check if CPU usage is too high
 - **SSL**
+	- Check if default certificate is used in server.conf
+	- Check if ssl is configured in inputs.conf (for indexers)
+	- Check if ssl is configured in outputs.conf (for forwarders)
+
+### The skipped check points
+For the following circumstances[^1] the corresponding check points will not be checked:
+
+- shcluster is disabled (default is enabled): **SHCLUSTER** will not be checked
+- cluster is disabled (default is enabled): **CLUSTER** will not be checked
+- ssl is enabled (default is disabled): **SSL** will not be checked
+
+[^1]:The above settings are configured when setting the cluster environment.
 
 ### The severity of warning messages
 We define 3 different kind of severity, from most severe to least severe: `severe`, `elevated`, `low`. The `low` is defined as nearly normal here, so if a check item comes with no warning messages is also expressed as `low`. Besides, we define a severity as `unknown` for those skipped check items.
