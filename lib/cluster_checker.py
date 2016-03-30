@@ -197,16 +197,16 @@ class ClusterChecker(object):
         for result in check_results:
             mem_pct = float(result['host_resource_usage']['mem_used']) / float(result['host_resource_usage']['mem'])
             if mem_pct > th_mem_pct:
-                self._add_warning_message(msg_list, 'The memory usage is very high ({pct:.2%}).'.format(pct=mem_pct),
-                                          Severity.ELEVATED)
+                self._add_warning_message(msg_list, 'The memory usage is very high ({pct:.2%}) on [{uri}].'.format(
+                    pct=mem_pct, uri=result['splunk_uri']), Severity.ELEVATED)
 
         # Check cpu usage.
         th_cpu_pct = 90.0
         for result in check_results:
             cpu_pct = 100 - float(result['host_resource_usage']['cpu_idle_pct'])
             if cpu_pct > th_cpu_pct:
-                self._add_warning_message(msg_list, 'The cpu usage is very high ({pct}%).'.format(pct=cpu_pct),
-                                          Severity.ELEVATED)
+                self._add_warning_message(msg_list, 'The cpu usage is very high ({pct}%) on [{uri}].'.format(
+                    pct=cpu_pct, uri=result['splunk_uri']), Severity.ELEVATED)
 
         return msg_list
 
