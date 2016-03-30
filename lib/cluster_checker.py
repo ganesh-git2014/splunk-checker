@@ -25,6 +25,7 @@ class ClusterChecker(object):
         self.search_factor = search_factor
         self.replication_factor = replication_factor
         self.enable_cluster = enable_cluster
+        # Should only means enable ssl on splunkd(not ssl between idx and fwd).
         self.enable_ssl = enable_ssl
         self.enable_shcluster = enable_shcluster
         self.cluster_id = cluster_id
@@ -60,7 +61,7 @@ class ClusterChecker(object):
             check_items.remove('CLUSTER')
         if not self.enable_shcluster:
             check_items.remove('SHCLUSTER')
-        if not self.enable_ssl:
+        if self.enable_ssl:
             check_items.remove('SSL')
         return check_items
 
@@ -152,6 +153,40 @@ class ClusterChecker(object):
                                               result['splunk_uri'], result['disk_space']['available']), Severity.SEVERE)
         return msg_list
 
+    def check_ssl(self):
+        check_results = []
+        for checker in self.all_checkers:
+            tmp_result = checker.check_ssl()
+            tmp_result['splunk_uri'] = checker.splunk_uri
+            check_results.append(tmp_result)
+
+        return check_results
+
+    def _generate_ssl_message(self, check_results):
+        msg_list = []
+        # Check server.conf if using the default certification.
+        for result in check_results:
+            if not self.enable_ssl:
+                if result['server']['sslConfig']['sslKeysfile'] != 'server.pem' or result['server'][
+                    'caCertFile'] != 'cacert.pem':
+                    self._add_warning_message(msg_list,
+                                              '[{0}] is not using default certificate in server.conf!'.format(
+                                                  result['splunk_uri']), Severity.ELEVATED)
+        # Check inputs.conf if using the default certification.
+        for result in check_results:
+            if 'inputs' in result:
+                if 'serverCert' in result['inputs']['SSL']:
+                    self._add_warning_message(msg_list, '[{0}] is using ssl in inputs.conf!'.format(
+                        result['splunk_uri']), Severity.ELEVATED)
+        # Check outputs.conf if using the default certification.
+        for result in check_results:
+            if 'outputs' in result:
+                for stanza in result['outputs']:
+                    if 'sslCertPath' in result['outputs'][stanza]:
+                        self._add_warning_message(msg_list, '[{0}] is using ssl in outputs.conf!'.format(
+                            result['splunk_uri']), Severity.ELEVATED)
+        return msg_list
+
     def check_license(self):
         check_results = []
         for checker in self.all_checkers:
@@ -168,9 +203,6 @@ class ClusterChecker(object):
         check_results.append(tmp_result)
 
         return check_results
-
-    def check_ssl(self):
-        pass
 
     def check_shcluster(self):
         check_results = []
@@ -242,9 +274,6 @@ class ClusterChecker(object):
 
         return msg_list
 
-    def _generate_ssl_message(self):
-        pass
-
     def _generate_shcluster_message(self, check_results):
         msg_list = []
         if len(check_results) < 3:
@@ -265,17 +294,21 @@ class ClusterChecker(object):
         """
         Check if there is http exception messages among the check result.
         """
+        warning_messages = []
         for result in check_results:
             # Fixme: The check method here is not very good.
             if 'is_http_exception' in result and result['is_http_exception'] is True:
-                warning_messages = []
                 for msg in result['messages']:
-                    self._add_warning_message(warning_messages,
-                                              'Http exception occurred at [{url}], warning messages: [{msg}]'.format(
-                                                  url=result['url'], msg=msg['text']), Severity.UNKNOWN)
-                return warning_messages
-        else:
-            return None
+                    if result['url']:
+                        self._add_warning_message(warning_messages,
+                                                  'Http exception occurred at [{url}], warning: [{msg}]'.format(
+                                                      url=result['url'], msg=msg['text']), Severity.UNKNOWN)
+                    else:
+                        self._add_warning_message(warning_messages,
+                                                  '{msg} @{splunk_uri}'.format(
+                                                      splunk_uri=result['splunk_uri'], msg=msg['text']),
+                                                  Severity.UNKNOWN)
+        return warning_messages if warning_messages else None
 
     def _add_warning_message(self, message_list, message, severity):
         """

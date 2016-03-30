@@ -107,9 +107,10 @@ Restart splunk, and the new check item will be found in the coming events.
 - Support for multi-site cluster
 - Support for more roles: e.g. deployer, deployment server
 - We assume all the search head in the same SHC, but there's more complex situation
-- Check for ssl
+- ~~Check for ssl~~
 - Check for normal conf settings
 - Can delete/edit cluster info from configuration page
 - ~~Add severity of each warning message~~
 - Add more dashboards for display
 - Control splunk through REST (e.g. restart all splunk in a cluster)
+- Check concurrent search number

@@ -4,13 +4,13 @@
 @since: 3/8/16
 '''
 import requests
-from requests.models import Response
 import xml.etree.ElementTree as ElementTree
-
 
 # from requests.packages.urllib3.exceptions import InsecureRequestWarning
 #
 # requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+from conf_helper import ConfHelper
+from errors import HTTPException
 
 
 def catch_http_exception(check_method):
@@ -100,10 +100,17 @@ class Checker(object):
 
     @catch_http_exception
     def check_ssl(self):
-        pass
+        result = dict()
+        helper = ConfHelper(self.splunk_uri, self._session_key)
+        result['server'] = dict()
+        result['server']['sslConfig'] = helper.get_stanza('server', 'sslConfig')
+        return result
 
     @catch_http_exception
     def check_conf_files(self):
+        """
+        Only check some critical conf files.
+        """
         pass
 
     @catch_http_exception
@@ -144,27 +151,3 @@ class Checker(object):
         will return {'b': 2, 'c': 3}
         """
         return {key: dict_obj[key] for key in select_keys}
-
-
-class HTTPException(Exception):
-    def __init__(self, response):
-        """
-        :param messages: is a list of messages.
-        """
-        self.messages = dict()
-        self.messages['is_http_exception'] = True
-        if isinstance(response, Response):
-            self.messages = response.json()
-            # This key value is used for ClusterChecker._check_http_exception to identify weather
-            # the check result is a http exception or a normal result.
-            self.messages['status_code'] = response.status_code
-            self.messages['url'] = response.url
-        else:
-            if response == 'SKIP':
-                # Try to fake a similar structure as above
-                tmp = dict()
-                tmp['text'] = 'The check is skipped due to http exception.'
-                self.messages['messages'] = []
-                self.messages['messages'].append(tmp)
-                self.messages['status_code'] = None
-                self.messages['url'] = None
