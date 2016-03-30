@@ -11,6 +11,18 @@ It's easy to use:
 3. Wait for some time until next check execution (The default interval is 10min)
 4. Find check results from overview page (e.g. <http://localhost:8000/en-US/app/splunk-checker/overview>)
 
+### The check points
+For now, these check points are supported for checking:
+
+- **SPLUNK_STATUS** 
+	- splunk status (Up/Down)
+	- splunk server info (e.g. version, guid, build, etc.)
+- **CLUSTER**
+- **SHCLUSTER**
+- **LICENSE**
+- **DISK_SPACE**
+- **SSL**
+
 ### The severity of warning messages
 We define 3 different kind of severity, from most severe to least severe: `severe`, `elevated`, `low`. The `low` is defined as nearly normal here, so if a check item comes with no warning messages is also expressed as `low`. Besides, we define a severity as `unknown` for those skipped check items.
 

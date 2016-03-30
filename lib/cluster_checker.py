@@ -112,7 +112,7 @@ class ClusterChecker(object):
                       'LICENSE': self.check_license,
                       'CLUSTER': self.check_cluster,
                       'SHCLUSTER': self.check_shcluster,
-                      'DISK_SPACE': self.check_disk_space}
+                      'RESOURCE_USAGE': self.check_resource_usage}
         return method_map[item]
 
     def _map_generate_message_method(self, item):
@@ -122,7 +122,7 @@ class ClusterChecker(object):
                       'LICENSE': self._generate_license_message,
                       'CLUSTER': self._generate_cluster_message,
                       'SHCLUSTER': self._generate_shcluster_message,
-                      'DISK_SPACE': self._generate_disk_space_message}
+                      'RESOURCE_USAGE': self._generate_resource_usage_message}
         return method_map[item]
 
     def check_splunk_status(self):
@@ -134,26 +134,12 @@ class ClusterChecker(object):
 
         return check_results
 
-    def check_disk_space(self):
-        check_results = []
-        for checker in self.all_checkers:
-            tmp_result = checker.check_disk_space()
-            tmp_result['splunk_uri'] = checker.splunk_uri
-            check_results.append(tmp_result)
-
-        return check_results
-
-    def _generate_disk_space_message(self, check_results):
-        msg_list = []
-        th_space = 4000
-        for result in check_results:
-            if float(result['disk_space']['available']) < th_space:
-                self._add_warning_message(msg_list,
-                                          'The disk space is not enough on [{0}]! Only {1}Mb avaliable.'.format(
-                                              result['splunk_uri'], result['disk_space']['available']), Severity.SEVERE)
-        return msg_list
-
     def check_ssl(self):
+        """
+        This item also checks some conf files, you can consider it a sub item of `CONF` check item.
+        The conf files is a very large scope, so we cut it into some small items, and the `CONF` check will check
+        some normal conf files except those conf files that checked by other check points like this one.
+        """
         check_results = []
         for checker in self.all_checkers:
             tmp_result = checker.check_ssl()
@@ -167,8 +153,8 @@ class ClusterChecker(object):
         # Check server.conf if using the default certification.
         for result in check_results:
             if not self.enable_ssl:
-                if result['server']['sslConfig']['sslKeysfile'] != 'server.pem' or result['server']['sslConfig'][
-                    'caCertFile'] != 'cacert.pem':
+                if result['server']['sslConfig']['sslKeysfile'] != 'server.pem' or \
+                                result['server']['sslConfig']['caCertFile'] != 'cacert.pem':
                     self._add_warning_message(msg_list,
                                               '[{0}] is not using default certificate in server.conf!'.format(
                                                   result['splunk_uri']), Severity.ELEVATED)
@@ -185,6 +171,43 @@ class ClusterChecker(object):
                     if 'sslCertPath' in result['outputs'][stanza]:
                         self._add_warning_message(msg_list, '[{0}] is using ssl in outputs.conf!'.format(
                             result['splunk_uri']), Severity.ELEVATED)
+        return msg_list
+
+    def check_resource_usage(self):
+        check_results = []
+        for checker in self.all_checkers:
+            tmp_result = checker.check_resource_usage()
+            tmp_result['splunk_uri'] = checker.splunk_uri
+            check_results.append(tmp_result)
+
+        return check_results
+
+    def _generate_resource_usage_message(self, check_results):
+        msg_list = []
+        # Check disk space usage.
+        th_space = 8000
+        for result in check_results:
+            if float(result['disk_space']['available']) < th_space:
+                self._add_warning_message(msg_list,
+                                          'The disk space is not enough on [{0}]! Only {1}Mb avaliable.'.format(
+                                              result['splunk_uri'], result['disk_space']['available']), Severity.SEVERE)
+
+        # Check memory usage.
+        th_mem_pct = 0.90
+        for result in check_results:
+            mem_pct = float(result['host_resource_usage']['mem_used']) / float(result['host_resource_usage']['mem'])
+            if mem_pct > th_mem_pct:
+                self._add_warning_message(msg_list, 'The memory usage is very high ({pct:.2%}).'.format(pct=mem_pct),
+                                          Severity.ELEVATED)
+
+        # Check cpu usage.
+        th_cpu_pct = 90.0
+        for result in check_results:
+            cpu_pct = 100 - float(result['host_resource_usage']['cpu_idle_pct'])
+            if cpu_pct > th_cpu_pct:
+                self._add_warning_message(msg_list, 'The cpu usage is very high ({pct}%).'.format(pct=cpu_pct),
+                                          Severity.ELEVATED)
+
         return msg_list
 
     def check_license(self):

@@ -92,13 +92,6 @@ class Checker(object):
         return result
 
     @catch_http_exception
-    def check_disk_space(self):
-        result = dict()
-        parsed_response = self._request_get('/services/server/status/partitions-space')
-        result['disk_space'] = self._select_dict(parsed_response['entry'][0]['content'], ['available', 'capacity'])
-        return result
-
-    @catch_http_exception
     def check_ssl(self):
         result = dict()
         helper = ConfHelper(self.splunk_uri, self._session_key)
@@ -112,6 +105,28 @@ class Checker(object):
         Only check some critical conf files.
         """
         pass
+
+    @catch_http_exception
+    def check_resource_usage(self):
+        result = dict()
+        parsed_response = self._request_get('/services/server/status/partitions-space')
+        result['disk_space'] = self._select_dict(parsed_response['entry'][0]['content'], ['available', 'capacity'])
+
+        parsed_response = self._request_get('/services/server/status/resource-usage//hostwide')
+        result['host_resource_usage'] = self._select_dict(parsed_response['entry'][0]['content'],
+                                                          ['cpu_count', 'cpu_idle_pct', 'mem', 'mem_used'])
+
+        parsed_response = self._request_get('/services/server/status/resource-usage//iostats')
+        result['iostats'] = self._select_dict(parsed_response['entry'][0]['content'],
+                                              ['reads_kb_ps', 'reads_ps', 'writes_kb_ps', 'writes_ps'])
+
+        parsed_response = self._request_get('/services/server/status/resource-usage//splunk-processes')
+        result['process_resource_usage'] = []
+        for entry in parsed_response['entry']:
+            result['process_resource_usage'].append(
+                self._select_dict(entry['content'], ['mem_used', 'process_type']))
+
+        return result
 
     @catch_http_exception
     def check_license(self):
