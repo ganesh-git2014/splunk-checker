@@ -50,7 +50,7 @@ class ConfHelper(object):
             raise HTTPException(r)
 
         parsed_response = r.json()
-        return parsed_response['entry'][0]
+        return parsed_response['entry'][0]['content']
 
 
 if __name__ == '__main__':
