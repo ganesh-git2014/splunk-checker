@@ -118,19 +118,19 @@
   </row>
   <row>
     <panel>
-      <input type="radio" token="memory_unit" searchWhenChanged="true">
-        <label>Memory Unit</label>
-        <choice value="memory_pct">Percentage (%)</choice>
-        <choice value="memory_used">Volumn (Mb)</choice>
-        <default>memory_pct</default>
-        <initialValue>memory_pct</initialValue>
-      </input>
       <input type="time" token="time_range_memory">
         <label></label>
         <default>
           <earliest>-24h@h</earliest>
           <latest>now</latest>
         </default>
+      </input>
+      <input type="radio" token="memory_unit" searchWhenChanged="true">
+        <label>Memory Unit</label>
+        <choice value="memory_pct">Percentage (%)</choice>
+        <choice value="memory_used">Volumn (Mb)</choice>
+        <default>memory_pct</default>
+        <initialValue>memory_pct</initialValue>
       </input>
       <chart>
         <title>Memory Usage Info</title>
