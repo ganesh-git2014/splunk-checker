@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ElementTree
 # from requests.packages.urllib3.exceptions import InsecureRequestWarning
 #
 # requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-from requests.exceptions import ReadTimeout
+from requests.exceptions import Timeout
 
 from conf_helper import ConfHelper
 from errors import HTTPException
@@ -72,7 +72,7 @@ class Checker(object):
         uri = self.splunk_uri + endpoint
         try:
             response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False, timeout=10)
-        except ReadTimeout, e:
+        except Timeout, e:
             raise HTTPException('ReadTimeout', e)
         parsed_response = response.json()
         if response.status_code == 200:
