@@ -12,7 +12,7 @@ class IndexerChecker(Checker):
     @catch_http_exception
     def check_ssl(self):
         result = super(IndexerChecker, self).check_ssl()
-        helper = ConfHelper(self.splunk_uri, self._session_key)
+        helper = ConfHelper(self)
         result['inputs'] = dict()
         result['inputs']['SSL'] = helper.get_stanza('inputs', 'SSL')
         return result

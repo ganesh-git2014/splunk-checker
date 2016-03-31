@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ElementTree
 # from requests.packages.urllib3.exceptions import InsecureRequestWarning
 #
 # requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+from requests.exceptions import ReadTimeout
+
 from conf_helper import ConfHelper
 from errors import HTTPException
 
@@ -63,17 +65,20 @@ class Checker(object):
 
         return session_key
 
-    def _request_get(self, endpoint):
+    def request_get(self, endpoint):
         if self._session_key is None:
-            raise HTTPException('SKIP')
+            raise HTTPException('Skip')
         assert endpoint.startswith('/')
         uri = self.splunk_uri + endpoint
-        response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False, timeout=10)
+        try:
+            response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False, timeout=10)
+        except ReadTimeout, e:
+            raise HTTPException('ReadTimeout', e)
         parsed_response = response.json()
         if response.status_code == 200:
             return parsed_response
         else:
-            raise HTTPException(response)
+            raise HTTPException('Response', response)
 
     def check_splunk_status(self):
         result = dict()
@@ -85,7 +90,7 @@ class Checker(object):
             result['server_info'] = None
         else:
             result['status'] = 'Up'
-            parsed_response = self._request_get('/services/server/info')
+            parsed_response = self.request_get('/services/server/info')
             result['server_info'] = self._select_dict(parsed_response['entry'][0]['content'],
                                                       ['build', 'guid', 'numberOfVirtualCores', 'physicalMemoryMB',
                                                        'version'])
@@ -94,7 +99,7 @@ class Checker(object):
     @catch_http_exception
     def check_ssl(self):
         result = dict()
-        helper = ConfHelper(self.splunk_uri, self._session_key)
+        helper = ConfHelper(self)
         result['server'] = dict()
         result['server']['sslConfig'] = helper.get_stanza('server', 'sslConfig')
         return result
@@ -109,18 +114,18 @@ class Checker(object):
     @catch_http_exception
     def check_resource_usage(self):
         result = dict()
-        parsed_response = self._request_get('/services/server/status/partitions-space')
+        parsed_response = self.request_get('/services/server/status/partitions-space')
         result['disk_space'] = self._select_dict(parsed_response['entry'][0]['content'], ['available', 'capacity'])
 
-        parsed_response = self._request_get('/services/server/status/resource-usage//hostwide')
+        parsed_response = self.request_get('/services/server/status/resource-usage//hostwide')
         result['host_resource_usage'] = self._select_dict(parsed_response['entry'][0]['content'],
                                                           ['cpu_count', 'cpu_idle_pct', 'mem', 'mem_used'])
 
-        parsed_response = self._request_get('/services/server/status/resource-usage//iostats')
+        parsed_response = self.request_get('/services/server/status/resource-usage//iostats')
         result['iostats'] = self._select_dict(parsed_response['entry'][0]['content'],
                                               ['reads_kb_ps', 'reads_ps', 'writes_kb_ps', 'writes_ps'])
 
-        parsed_response = self._request_get('/services/server/status/resource-usage//splunk-processes')
+        parsed_response = self.request_get('/services/server/status/resource-usage//splunk-processes')
         result['process_resource_usage'] = []
         for entry in parsed_response['entry']:
             result['process_resource_usage'].append(
@@ -136,7 +141,7 @@ class Checker(object):
         # Fixme: What if it did not enable license master?
         result = dict()
         # Assume the splunk is license slave first.
-        parsed_response = self._request_get('/services/licenser/localslave')
+        parsed_response = self.request_get('/services/licenser/localslave')
         # Fixme: What if more than one license master is enabled?
         license_master = parsed_response['entry'][0]['content']['master_uri']
         result['license_master'] = license_master
@@ -144,7 +149,7 @@ class Checker(object):
         # Assume the splunk is a license master now.
         if license_master == 'self':
             result['licenses'] = dict()
-            parsed_response = self._request_get('/services/licenser/licenses')
+            parsed_response = self.request_get('/services/licenser/licenses')
 
             # The following content are what we want to reserve from the endpoint.
             for msg in parsed_response['entry']:
@@ -153,7 +158,7 @@ class Checker(object):
                         self._select_dict(msg['content'], ['expiration_time', 'label', 'quota', 'type'])
 
             # Acquire the total license usage
-            parsed_response = self._request_get('/services/licenser/usage/license_usage')
+            parsed_response = self.request_get('/services/licenser/usage/license_usage')
             result['usage'] = self._select_dict(parsed_response['entry'][0]['content'], ['quota', 'slaves_usage_bytes'])
 
         return result

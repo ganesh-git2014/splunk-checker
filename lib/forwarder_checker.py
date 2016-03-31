@@ -12,7 +12,7 @@ class ForwarderChecker(Checker):
     @catch_http_exception
     def check_ssl(self):
         result = super(ForwarderChecker, self).check_ssl()
-        helper = ConfHelper(self.splunk_uri, self._session_key)
+        helper = ConfHelper(self)
         conf_content = helper.get_conf('outputs')
         result['outputs'] = dict()
         for stanza in conf_content.keys():
