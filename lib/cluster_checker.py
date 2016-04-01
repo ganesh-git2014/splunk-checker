@@ -290,10 +290,17 @@ class ClusterChecker(object):
             self._add_warning_message(msg_list, 'Replication factor [{0}] is different from defined [{1}].'.format(
                 check_results[0]['replication_factor'],
                 self.replication_factor), Severity.SEVERE)
+
         # Check search factor
         if check_results[0]['search_factor'] != self.search_factor:
             self._add_warning_message(msg_list, 'Search factor [{0}] is different from defined [{1}].'.format(
                 check_results[0]['search_factor'], self.search_factor), Severity.SEVERE)
+
+        # Check active bundle id for each peer
+        bundle_id = check_results[0]['peers'][0]['active_bundle_id']
+        for peer_info in check_results[0]['peers']:
+            if peer_info['active_bundle_id'] != bundle_id:
+                self._add_warning_message(msg_list, 'Active bundle id is not consistent for all peers', Severity.SEVERE)
 
         return msg_list
 
@@ -308,7 +315,8 @@ class ClusterChecker(object):
         captain_id = check_results[0]['captain']['id']
         for result in check_results:
             if result['captain']['id'] != captain_id:
-                self._add_warning_message(msg_list, 'The captain id is not consistent!', Severity.SEVERE)
+                self._add_warning_message(msg_list, 'The captain id is not consistent for all search heads!',
+                                          Severity.SEVERE)
                 break
 
         return msg_list

@@ -12,4 +12,11 @@ class MasterChecker(Checker):
         parsed_response = self.request_get('/services/cluster/config')
         result = self._select_dict(parsed_response['entry'][0]['content'],
                                    ['search_factor', 'replication_factor', 'site'])
+
+        parsed_response = self.request_get('/services/cluster/master/peers')
+        result['peers'] = []
+        for entry in parsed_response['entry']:
+            result['peers'].append(self._select_dict(entry['content'],
+                                                     ['bucket_count', 'bucket_count_by_index', 'active_bundle_id',
+                                                      'primary_count', 'search_state_counter', 'label']))
         return result

@@ -19,6 +19,7 @@ For now, these check points are supported for checking (The stats of each check 
 - **CLUSTER**
 	- Check if replication factor is same as defined
 	- Check if search factor is same as defined
+	- Check if active bundle id is the same for all peers
 - **SHCLUSTER**
 	- Check if the number of search heads is more than 3
 	- Check if the captain is the same one from all search heads
@@ -143,7 +144,8 @@ Restart splunk, and the new check item will be found in the coming events.
 - ~~Check for ssl~~
 - Check for normal conf settings
 - Can delete/edit cluster info from configuration page
+- Rearrange configuration page layout
 - ~~Add severity of each warning message~~
-- Add more dashboards for display
+- ~~Add more dashboards for display~~
 - Control splunk through REST (e.g. restart all splunk in a cluster)
 - Check concurrent search number
