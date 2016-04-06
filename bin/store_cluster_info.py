@@ -27,6 +27,10 @@ class StoreCluster(admin.MConfigHandler):
             self.supportedArgs.addReqArg('username')
             self.supportedArgs.addReqArg('password')
             self.supportedArgs.addReqArg('role')
+            self.supportedArgs.addReqArg('splunk_home')
+            self.supportedArgs.addReqArg('host')
+            self.supportedArgs.addReqArg('host_username')
+            self.supportedArgs.addReqArg('host_password')
         return
 
     # def handleEdit(self, confInfo):

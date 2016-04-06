@@ -166,3 +166,4 @@ Restart splunk, and the new check item will be found in the coming events.
 - Control splunk through REST (e.g. restart all splunk in a cluster)
 - Check concurrent search number
 - Add a process progress bar for cluster upgrade
+- Auto fill the splunk home & host in configuration page

@@ -79,7 +79,7 @@ class SplunkCluster(object):
         :return: None
         """
         # Fixme: does it need to set `domain` for Windows?
-        conn = SSHConnection(host=host, user=user, password=password, domain='')
+        conn = SSHConnection(host=str(host), user=str(user), password=str(password), domain='')
         splunk = SplunkFactory().getSplunk(str(splunk_home), connection=conn)
         splunk._splunk_home = splunk_home
 
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     cluster_info = get_cluster_info(server_uri, session_key, cluster_id)
     cluster = SplunkCluster()
     for peer_info in cluster_info['peers']:
-        cluster.add_peer(peer_info['splunk_home'], peer_info['role'], peer_info['host'], peer_info['host_user'],
+        cluster.add_peer(peer_info['splunk_home'], peer_info['role'], peer_info['host'], peer_info['host_username'],
                          peer_info['host_password'])
 
     cluster.upgrade_cluster(branch, build, package_type)

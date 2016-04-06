@@ -71,7 +71,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         font-size: large;
     }
     form.input_form {
-        display:inline-block;
+        display:table;
         text-align: left;
         line-height:150%;
         font-size: 17px;
@@ -87,7 +87,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         clear:left;
     }
     #result_section {
-        display:inline-block;
+        display:table;
         float:right;
         padding-top: 20px;
         padding-right: 50px;
@@ -103,7 +103,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
 </style>
 <body>
     <div id="header">
-    <h3>Configuration</h3>
+    <h3>Configure & Upgrade</h3>
     </div>
 
     <form id="cluster_info" class="input_form">
@@ -116,11 +116,11 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         RF=<input type="number" min="1" id="rf" required>SF=<input type="number" min="1" id="sf" required><br>
         </div>
         <input type="checkbox" id="enable_shcluster" value="True" checked>Enable search head cluster<br>
-        Please input splunk uri (e.g. https://systest-auto-idx1:1901):<br>
+        Splunk URI (e.g. https://systest-auto-idx1:1901):<br>
         <input id="splunk_uri" type="url" required><br>
-        Username:<br>
+        Splunk Username:<br>
         <input id="username" required><br>
-        Password:<br>
+        Splunk Password:<br>
         <input id="password" required><br>
         Role:<br>
         <select id="role_select">
@@ -130,6 +130,14 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
             <option value="searchhead">Search Head</option>
             <option value="forwarder">Forwarder</option>
         </select><br>
+        Splunk Home (e.g. /root/splunk):<br>
+        <input id="splunk_home"><br>
+        Host (e.g. systest-auto-idx):<br>
+        <input id="host" required><br>
+        Host Username:<br>
+        <input id="host_username" required><br>
+        Host Password:<br>
+        <input id="host_password" required><br>
         <input type="submit" id="add_peer_btn" value="Add Peer!">
     </form>
 
@@ -225,7 +233,11 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             splunk_uri: $("#splunk_uri").val(),
                             username: $("#username").val(),
                             password: $("#password").val(),
-                            role: $("#role_select").val()
+                            role: $("#role_select").val(),
+                            splunk_home: $("#splunk_home").val(),
+                            host: $("#host").val(),
+                            host_username: $("#host_username").val(),
+                            host_password: $("#host_password").val()
                         }
                     });
 

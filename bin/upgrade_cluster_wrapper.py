@@ -9,7 +9,7 @@ from splunk import admin
 from splunk import rest
 import os
 
-import default
+# import default
 
 
 class StoreCluster(admin.MConfigHandler):
