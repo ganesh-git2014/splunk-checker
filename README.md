@@ -1,7 +1,9 @@
 # Splunk Checker
 This app is used to check cluster health status.
-## What can it do
-- Check
+## What it can do
+- Check splunk stats over several clusters
+- Give warning messages for each check item
+- Upgrade cluster to specific version, build
 
 ## User Guide
 
@@ -51,9 +53,11 @@ For the following circumstances[^1] the corresponding check points will not be c
 We define 3 different kind of severity, from most severe to least severe: `severe`, `elevated`, `low`. The `low` is defined as nearly normal here, so if a check item comes with no warning messages is also expressed as `low`. Besides, we define a severity as `unknown` for those skipped check items.
 
 ### Prerequisites for upgrading cluster
-Because splunk do not support install python package to its own python interpreter, we use a subprocess to enable another outside python interpreter. So you need to specify the python interpreter and make sure that interpreter has `helmut` installed. (Maybe just copy the `helmut` package to the splunk python path also works! Not try yet.)
+**What should you do**: Change the `pythonPath` item in `cluster_upgrade.conf` file to the specific path.
 
-As the version, we suggest at least `python 2.7.9` and `helmut 1.2.1`. (In earlier `helmut`, splunk installing on Windows did not use *msi* package.)
+**Reason**: Because splunk do not support install python package to its own python interpreter, we use a subprocess to enable another outside python interpreter. So you need to specify the python interpreter and make sure that interpreter has `helmut` installed. (Maybe just copy the `helmut` package to the splunk python path also works! Not try yet.)
+
+**About version**: We suggest at least `python 2.7.9` and `helmut 1.2.1`. (In earlier `helmut`, splunk installing on Windows did not use *msi* package.)
 
 ## Dev Guide
 
@@ -65,6 +69,7 @@ The following splunk features are used to implement the app:
 - Use the `index=splunk_checker` to store all the collected infomation from all the clusters
 - Use `restmap.conf` and `web.conf` to make a mapping from web site to REST (e.g. <http://localhost:8000/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info> mapped to <https://localhost:8089/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info>)
 - Customized xml and html page
+- Use python subprocess so that we can use outside python interpreter and packages in our script (Can also implenmented by custom search command in new version of splunk now)
 
 ### How to add a check item
 1. In the `lib/constant.py`, add the item name to `CHECK_TIEM`;
@@ -151,6 +156,9 @@ At last, in `_map_check_method` and `_map_generate_message_method`, register the
 ```
 
 Restart splunk, and the new check item will be found in the coming events.
+
+## Limits
+- This app can only support installed on Linux OS. (Some `/` need to be replaced with `\` on Windows)
 
 ## TODO List
 

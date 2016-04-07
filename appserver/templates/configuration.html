@@ -78,13 +78,14 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         padding-top: 20px;
         padding-right: 50px;
         padding-bottom: 30px;
-        padding-left: 50px;
+        padding-left: 80px;
         border: solid 1px black;
         border-radius: 25px;
         margin-top: 30px;
         margin-left: 20px;
         background-color: white;
         clear:left;
+        width: 35%;
     }
     #result_section {
         display:table;
@@ -94,11 +95,13 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         padding-bottom: 30px;
         padding-left: 50px;
         border: solid 1px black;
+        border-radius: 25px;
         margin-top: 30px;
-        margin-right: 20px;
+        margin-right: 50px;
         position: absolute;
         right: 0;
         top: 80px;
+        width: 35%;
     }
     h4 {
         font-family: "Arial Rounded MT Bold";
@@ -303,7 +306,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
             <option selected value="splunk">Splunk</option>
             <option value="universalforwarder">Universal Forwarder</option>
         </select><br>
-        <input type="submit" id="upgrade_cluster_btn" value="Upgrade!">
+        <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
     </form>
 
 </body>
