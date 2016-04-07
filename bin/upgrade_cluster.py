@@ -149,6 +149,12 @@ if __name__ == '__main__':
         sys.path.append(path)
 
     server_uri, session_key, cluster_id, branch, build, package_type = args[1:]
+    if branch == 'current':
+        branch = None
+    if build == 'latest':
+        build = None
+    if package_type == 'splunk':
+        package_type = None
 
     # Init SplunkCluster.
     cluster_info = get_cluster_info(server_uri, session_key, cluster_id)

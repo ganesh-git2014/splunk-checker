@@ -11,7 +11,7 @@ from lib.checker import Checker
 if __name__ == '__main__':
     cluster_id = 'systest-linux-sh'
     branch = 'current'
-    build = 'a201e3ad77d5'
+    build = 'latest'
     package_type = 'splunk'
 
     checker = Checker('https://localhost:8089', 'admin', 'changed')

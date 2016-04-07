@@ -268,6 +268,14 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                 $("#sf").val(localStorage.getItem("sf"));
 
                 $("#upgrade_cluster_btn").click(function(){
+                    //Valid inputs.
+                    var check_inputs = [$('#cluster_id_upgrade'), $('#branch')];
+                    for (var i = 0, len = check_inputs.length; i<len; ++i) {
+                        if (!check_inputs[i].val()){
+                            return;
+                        }
+                    }
+                    //Send upgrade info.
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster",
                         type: 'POST',
@@ -298,7 +306,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         Cluster ID:<br>
         <input id="cluster_id_upgrade" required><br>
         The branch (e.g current/galaxy):<br>
-        <input id="branch"><br>
+        <input id="branch" required><br>
         Build (e.g f2c836328108):<br>
         <input id="build" value="latest"><br>
         Package Type:<br>
