@@ -45,7 +45,10 @@ class StoreCluster(admin.MConfigHandler):
              cluster_id, branch, build, package_type],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = p.communicate()[0]
-        print output
+        if output == '':
+            confInfo['upgrade']['progress'] = 'Success'
+        else:
+            confInfo['upgrade']['progress'] = 'Failed'
 
 
 if __name__ == "__main__":

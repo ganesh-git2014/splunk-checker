@@ -96,6 +96,9 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         border: solid 1px black;
         margin-top: 30px;
         margin-right: 20px;
+        position: absolute;
+        right: 0;
+        top: 80px;
     }
     h4 {
         font-family: "Arial Rounded MT Bold";
@@ -271,6 +274,9 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             branch: $("#branch").val(),
                             build: $("#build").val(),
                             package_type: $("#package_type").val()
+                        },
+                        success: function (data){
+                            //TODO: Display upgrade success or fail info.
                         }
                     });
                 });

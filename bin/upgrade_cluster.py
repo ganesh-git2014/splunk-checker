@@ -4,6 +4,7 @@
 @since: 4/1/16
 '''
 import sys
+import threading
 from optparse import OptionParser
 
 import os
@@ -57,17 +58,27 @@ WindowsSSHSplunk.install_from_archive = install_from_archive
 class SplunkCluster(object):
     def __init__(self):
         self.master_list = []
-        self.searchhead_list = []
-        self.indexer_list = []
-        self.forwarder_list = []
+        self.other_peer_list = []
 
     def upgrade_cluster(self, branch, build, package_type):
+        # Upgrade master first.
         for splunk in self.master_list:
             splunk.upgrade_nightly(branch=branch, build=build, package_type=package_type)
-            # TODO: use multi thread to upgrade other peers.
 
-    def upgrade_splunk(self, host):
-        pass
+        for splunk in self.other_peer_list:
+            upgrade_thread = self.UpgradeThread(splunk, branch, build, package_type)
+            upgrade_thread.start()
+
+    class UpgradeThread(threading.Thread):
+        def __init__(self, splunk, branch, build, package_type):
+            threading.Thread.__init__(self)
+            self.splunk = splunk
+            self.branch = branch
+            self.build = build
+            self.package_type = package_type
+
+        def run(self):
+            self.splunk.upgrade_nightly(branch=self.branch, build=self.build, package_type=self.package_type)
 
     def add_peer(self, splunk_home, role, host, user, password):
         """
@@ -79,6 +90,7 @@ class SplunkCluster(object):
         :return: None
         """
         # Fixme: does it need to set `domain` for Windows?
+        # TODO: make connection also multi threaded.
         conn = SSHConnection(host=str(host), user=str(user), password=str(password), domain='')
         splunk = SplunkFactory().getSplunk(str(splunk_home), connection=conn)
         splunk._splunk_home = splunk_home
@@ -86,12 +98,8 @@ class SplunkCluster(object):
         role = role.lower()
         if role == 'master':
             self.master_list.append(splunk)
-        elif role == 'searchhead':
-            self.searchhead_list.append(splunk)
-        elif role == 'indexer':
-            self.indexer_list.append(splunk)
-        elif role == 'forwarder':
-            self.forwarder_list.append(splunk)
+        else:
+            self.other_peer_list.append(splunk)
 
 
 def get_cluster_info(server_uri, session_key, cluster_id):
