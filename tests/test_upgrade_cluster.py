@@ -9,7 +9,7 @@ import subprocess
 from lib.checker import Checker
 
 if __name__ == '__main__':
-    cluster_id = 'systest-linux-sh'
+    cluster_id = 'test'
     branch = 'current'
     build = 'latest'
     package_type = 'splunk'

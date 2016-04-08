@@ -78,7 +78,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         padding-top: 20px;
         padding-right: 50px;
         padding-bottom: 30px;
-        padding-left: 80px;
+        padding-left: 70px;
         border: solid 1px black;
         border-radius: 25px;
         margin-top: 30px;
@@ -202,7 +202,6 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                     url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/store_cluster_info?output_mode=json",
                     type: 'GET',
                     success: function (data){
-                        //TODO: input validation.
                         for (var i=0; i < data.entry.length; ++i) {
                             var json_obj = JSON.parse(data.entry[i].content.cluster_info);
                             var output = JSON.stringify(json_obj, null, 4);
@@ -267,7 +266,9 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                 $("#rf").val(localStorage.getItem("rf"));
                 $("#sf").val(localStorage.getItem("sf"));
 
-                $("#upgrade_cluster_btn").click(function(){
+                $("#upgrade_cluster_form").submit(function(e){
+                    //Prevent the submit action making page refresh.
+                    e.preventDefault();
                     //Valid inputs.
                     var check_inputs = [$('#cluster_id_upgrade'), $('#branch')];
                     for (var i = 0, len = check_inputs.length; i<len; ++i) {
@@ -286,8 +287,9 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             build: $("#build").val(),
                             package_type: $("#package_type").val()
                         },
-                        success: function (data){
+                        success: function (data) {
                             //TODO: Display upgrade success or fail info.
+                            alert('Upgrade Done!');
                         }
                     });
                 });

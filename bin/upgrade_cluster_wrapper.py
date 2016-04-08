@@ -11,7 +11,7 @@ from splunk import rest
 import os
 
 
-import default
+# import default
 
 
 def read_conf_item(conf_name, stanza, item):
@@ -58,10 +58,11 @@ class StoreCluster(admin.MConfigHandler):
              cluster_id, branch, build, package_type],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = p.communicate()[0]
-        if output == '':
-            confInfo['upgrade']['progress'] = 'Success'
-        else:
-            confInfo['upgrade']['progress'] = 'Failed'
+        confInfo['upgrade']['progress'] = '[Done]'
+        # if output == '':
+        #     confInfo['upgrade']['progress'] = 'Success'
+        # else:
+        #     confInfo['upgrade']['progress'] = 'Failed'
 
 
 if __name__ == "__main__":
