@@ -8,8 +8,6 @@ from xml.sax import saxutils
 import xml.etree.ElementTree as ElementTree
 # import default
 import os
-
-# Why cannot import from lib (as package) directly?
 import time
 
 path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')

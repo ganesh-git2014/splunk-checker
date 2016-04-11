@@ -100,7 +100,7 @@ class SplunkCluster(object):
 
     def start_cluster(self):
         for splunk in self.master_list:
-            splunk.stop()
+            self.start_wrapper(splunk)
 
         num_peer = len(self.other_peer_list)
         if num_peer == 0:
@@ -108,12 +108,17 @@ class SplunkCluster(object):
         pool = ThreadPool(processes=num_peer)
         progress = Progress('start_cluster')
         for splunk in self.other_peer_list:
-            async_result = pool.apply_async(splunk.start)
+            async_result = pool.apply_async(self.start_wrapper, (splunk,))
             progress.add_watch_object(splunk.name)
             _thread = self.ProgressThread(progress, splunk.name, async_result)
             _thread.start()
 
         self._wait_for_all_progress_done(progress)
+
+    @staticmethod
+    def start_wrapper(splunk):
+        # Replace the helmut start method to support more arguments.
+        splunk.execute("start --accept-license --answer-yes")
 
     def upgrade_cluster(self, branch, build, package_type):
         # Upgrade master first.
