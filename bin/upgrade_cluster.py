@@ -61,6 +61,7 @@ WindowsSSHSplunk.install_from_archive = install_from_archive
 
 class Progress(object):
     InProgress = "InProgress"
+    Done = "Done"
 
     def __init__(self, cluster_id, name):
         """
@@ -75,6 +76,9 @@ class Progress(object):
         self.progress[object_name] = self.InProgress
 
     def update_watch_object(self, object_name, status):
+        # Replace the `0` (success return for splunk stop) and `None` (success return for splunk start) with "Done"
+        if not status:
+            status = self.Done
         self.progress[object_name] = status
 
     def json(self):
@@ -294,5 +298,5 @@ if __name__ == '__main__':
                          peer_info['host_password'])
 
     cluster.stop_cluster()
-    # cluster.upgrade_cluster(branch, build, package_type)
+    cluster.upgrade_cluster(branch, build, package_type)
     cluster.start_cluster()

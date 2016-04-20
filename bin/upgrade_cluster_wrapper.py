@@ -4,12 +4,16 @@
 @since: 4/6/16
 '''
 import ConfigParser
+import json
 import subprocess
 
 from splunk import admin
 from splunk import rest
 import os
 
+path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
+sys.path.append(path_prepend)
+from kvstore_helper import KVStoreHelper
 
 # import default
 
@@ -36,7 +40,16 @@ class StoreCluster(admin.MConfigHandler):
         return
 
     def handleList(self, confInfo):
-        pass
+        """
+        List the progress of upgrading from kvstore.
+        """
+        helper = KVStoreHelper(self.getSessionKey())
+        uri = rest.makeSplunkdUri()
+        content = helper.get_upgrade_progress(
+            uri + 'servicesNS/nobody/splunk-checker/storage/collections/data/upgrade_progress')
+
+        for cluster_progress in content:
+            confInfo[cluster_progress['cluster_id']]['upgrade_progress'] = json.dumps(cluster_progress)
 
     def handleCreate(self, confInfo):
         post_data = self.callerArgs.data

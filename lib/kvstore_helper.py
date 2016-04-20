@@ -28,21 +28,26 @@ class KVStoreHelper(object):
         else:
             new_endpoint = endpoint
             data = json.dumps(cluster_info)
+        data = data.replace('.', "[dot]")
         r = requests.post(new_endpoint, data=data, headers=self._json_header, verify=False)
         assert r.status_code in (201, 200)
+
+    def _get_info_from_endpoint(self, endpoint):
+        r = requests.get(endpoint, headers=self._header, verify=False)
+        assert r.status_code == 200
+        response_content = r.content.replace("[dot]", ".")
+        parsed_response = json.loads(response_content)
+        for content in parsed_response:
+            content.pop('_key')
+            content.pop('_user')
+        return parsed_response
 
     def get_cluster_info(self, endpoint):
         """
         Return the value according to the key.
         Return None if not found.
         """
-        r = requests.get(endpoint, headers=self._header, verify=False)
-        assert r.status_code == 200
-        parsed_response = json.loads(r.content)
-        for content in parsed_response:
-            content.pop('_key')
-            content.pop('_user')
-        return parsed_response
+        return self._get_info_from_endpoint(endpoint)
 
     def _find_kvpair_by_id(self, endpoint, id):
         """
@@ -84,3 +89,6 @@ class KVStoreHelper(object):
         data = data.replace('.', "[dot]")
         r = requests.post(new_endpoint, data=data, headers=self._json_header, verify=False)
         assert r.status_code in (201, 200)
+
+    def get_upgrade_progress(self, endpoint):
+        return self._get_info_from_endpoint(endpoint)

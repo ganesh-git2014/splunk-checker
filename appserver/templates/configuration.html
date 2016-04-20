@@ -70,7 +70,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         color: white;
         font-size: large;
     }
-    form.input_form {
+    div.input_form {
         display:table;
         text-align: left;
         line-height:150%;
@@ -112,7 +112,8 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     <h3>Configure & Upgrade</h3>
     </div>
 
-    <form id="cluster_info" class="input_form">
+    <div class="input_form">
+    <form id="cluster_info">
         <h4>Configure Environment for Splunk Checker</h4>
         Cluster ID:<br>
         <input id="cluster_id" required><br>
@@ -146,6 +147,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         <input id="host_password" required><br>
         <input type="submit" id="add_peer_btn" value="Add Peer!">
     </form>
+    </div>
 
     <!--Splunk will put the files under appserver/static/ to someplace like this-->
     <!--<script src="/static/app/splunk-checker/configuration.js"></script>-->
@@ -267,16 +269,16 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                 $("#sf").val(localStorage.getItem("sf"));
 
                 $("#upgrade_cluster_form").submit(function(e){
-                    //Prevent the submit action making page refresh.
+                    // Prevent the submit action making page refresh.
                     e.preventDefault();
-                    //Valid inputs.
+                    // Valid inputs.
                     var check_inputs = [$('#cluster_id_upgrade'), $('#branch')];
                     for (var i = 0, len = check_inputs.length; i<len; ++i) {
                         if (!check_inputs[i].val()){
                             return;
                         }
                     }
-                    //Send upgrade info.
+                    // Send upgrade info.
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster",
                         type: 'POST',
@@ -293,6 +295,19 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         }
                     });
                 });
+
+                // Get upgrade progress.
+                $.ajax({
+                    url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
+                    type: 'GET',
+                    success: function (data){
+                        for (var i=0; i < data.entry.length; ++i) {
+                            var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
+                            var output = JSON.stringify(json_obj, null, 4);
+                            $("#upgrade_progress").append("<li><pre>"+output+"</pre></li>")
+                        }
+                    }
+                });
             });
         });
     </script>
@@ -303,7 +318,8 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     </ul>
     </div>
 
-    <form id="upgrade_cluster_form" class="input_form">
+    <div class="input_form">
+    <form id="upgrade_cluster_form">
         <h4>Upgrade Specific Cluster</h4>
         Cluster ID:<br>
         <input id="cluster_id_upgrade" required><br>
@@ -318,6 +334,10 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         </select><br>
         <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
     </form>
+        <br>
+        <ul id="upgrade_progress">
+        </ul>
+    </div>
 
 </body>
 </html>
