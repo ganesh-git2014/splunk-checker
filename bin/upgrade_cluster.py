@@ -62,34 +62,48 @@ WindowsSSHSplunk.install_from_archive = install_from_archive
 class Progress(object):
     InProgress = "InProgress"
 
-    def __init__(self, name):
+    def __init__(self, cluster_id, name):
+        """
+        :param cluster_id: cluster_id
+        :param name: progress name, e.g. 'starting'
+        """
+        self.cluster_id = cluster_id
         self.name = name
         self.progress = dict()
 
     def add_watch_object(self, object_name):
         self.progress[object_name] = self.InProgress
 
+    def update_watch_object(self, object_name, status):
+        self.progress[object_name] = status
+
     def json(self):
         result = dict()
+        result['cluster_id'] = self.cluster_id
         result['name'] = self.name
         result['progress'] = self.progress
         return json.dumps(result)
 
 
 class SplunkCluster(object):
-    def __init__(self):
+    def __init__(self, cluster_id):
+        self.cluster_id = cluster_id
         self.master_list = []
         self.other_peer_list = []
 
     def stop_cluster(self):
+        progress = Progress(self.cluster_id, 'stop_cluster')
         for splunk in self.master_list:
+            progress.add_watch_object(splunk.name)
+            post_progress(progress)
             splunk.stop()
+            progress.update_watch_object(splunk.name, 0)
+            post_progress(progress)
 
         num_peer = len(self.other_peer_list)
         if num_peer == 0:
             return
         pool = ThreadPool(processes=num_peer)
-        progress = Progress('stop_cluster')
         for splunk in self.other_peer_list:
             async_result = pool.apply_async(splunk.stop)
             progress.add_watch_object(splunk.name)
@@ -99,14 +113,19 @@ class SplunkCluster(object):
         self._wait_for_all_progress_done(progress)
 
     def start_cluster(self):
+        progress = Progress(self.cluster_id, 'start_cluster')
         for splunk in self.master_list:
+            progress.add_watch_object(splunk.name)
+            post_progress(progress)
             self.start_wrapper(splunk)
+            progress.update_watch_object(splunk.name, 0)
+            post_progress(progress)
 
         num_peer = len(self.other_peer_list)
         if num_peer == 0:
             return
         pool = ThreadPool(processes=num_peer)
-        progress = Progress('start_cluster')
+
         for splunk in self.other_peer_list:
             async_result = pool.apply_async(self.start_wrapper, (splunk,))
             progress.add_watch_object(splunk.name)
@@ -121,15 +140,19 @@ class SplunkCluster(object):
         splunk.execute("start --accept-license --answer-yes")
 
     def upgrade_cluster(self, branch, build, package_type):
+        progress = Progress(self.cluster_id, 'upgrade_cluster')
         # Upgrade master first.
         for splunk in self.master_list:
+            progress.add_watch_object(splunk.name)
+            post_progress(progress)
             splunk.migrate_nightly(branch=branch, build=build, package_type=package_type)
+            progress.update_watch_object(splunk.name, 0)
+            post_progress(progress)
 
         num_peer = len(self.other_peer_list)
         if num_peer == 0:
             return
         pool = ThreadPool(processes=num_peer)
-        progress = Progress('upgrade_cluster')
         for splunk in self.other_peer_list:
             async_result = pool.apply_async(self.upgrade_wrapper, (splunk, branch, build, package_type))
             progress.add_watch_object(splunk.name)
@@ -147,20 +170,14 @@ class SplunkCluster(object):
 
     def _wait_for_all_progress_done(self, progress, interval=1):
         while True:
+            post_progress(progress)
             for item in progress.progress.values():
                 if item == Progress.InProgress:
                     break
             else:
                 # This break will break the outside loop!
                 break
-            self._post_progress(progress)
             time.sleep(interval)
-
-    def _post_progress(self, progress):
-        """
-        Used to post the progress to the REST endpoint.
-        """
-        pass
 
     def add_peer(self, splunk_home, role, host, user, password):
         """
@@ -197,7 +214,21 @@ class SplunkCluster(object):
             self.result = async_result
 
         def run(self):
-            self.progress.progress[self.name] = self.result.get()
+            self.progress.update_watch_object(self.name, self.result.get())
+
+
+global SESSION_KEY, SERVER_URI
+
+
+def post_progress(progress):
+    """
+    Used to post the progress to the KVStore.
+    :param progress: a {Progress} object.
+    """
+    helper = KVStoreHelper(SESSION_KEY)
+    helper.update_upgrade_progress(
+        os.path.join(SERVER_URI, 'servicesNS/nobody/splunk-checker/storage/collections/data/upgrade_progress'),
+        progress)
 
 
 def get_cluster_info(server_uri, session_key, cluster_id):
@@ -238,6 +269,7 @@ def test_single_instance():
 
 
 if __name__ == '__main__':
+    global SESSION_KEY, SERVER_URI
     parser = OptionParser()
     (options, args) = parser.parse_args()
     _SPLUNK_PYTHON_PATH = args[0]
@@ -246,7 +278,7 @@ if __name__ == '__main__':
     for path in PATH_LIST:
         sys.path.append(path)
 
-    server_uri, session_key, cluster_id, branch, build, package_type = args[1:]
+    SERVER_URI, SESSION_KEY, cluster_id, branch, build, package_type = args[1:]
     if branch == 'current':
         branch = None
     if build == 'latest':
@@ -255,12 +287,12 @@ if __name__ == '__main__':
         package_type = None
 
     # Init SplunkCluster.
-    cluster_info = get_cluster_info(server_uri, session_key, cluster_id)
-    cluster = SplunkCluster()
+    cluster_info = get_cluster_info(SERVER_URI, SESSION_KEY, cluster_id)
+    cluster = SplunkCluster(cluster_id)
     for peer_info in cluster_info['peers']:
         cluster.add_peer(peer_info['splunk_home'], peer_info['role'], peer_info['host'], peer_info['host_username'],
                          peer_info['host_password'])
 
     cluster.stop_cluster()
-    cluster.upgrade_cluster(branch, build, package_type)
+    # cluster.upgrade_cluster(branch, build, package_type)
     cluster.start_cluster()

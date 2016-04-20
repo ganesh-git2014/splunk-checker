@@ -60,3 +60,27 @@ class KVStoreHelper(object):
                 _key = kvpair['_key']
                 content = kvpair
         return content
+
+    # TODO: delete the progress item from kvstore when all progresses are finished.
+    def update_upgrade_progress(self, endpoint, progress):
+        """
+        :param endpoint: kvstore endpoint.
+        :param progress: a {Progress} object.
+        :return: None
+        """
+        content = self._find_kvpair_by_id(endpoint, progress.cluster_id)
+        if content:
+            _key = content['_key']
+            new_endpoint = os.path.join(endpoint, _key)
+            content.pop('_key')
+            content.pop('_user')
+            content['name'] = progress.name
+            content['progress'] = progress.progress
+            data = json.dumps(content)
+        else:
+            new_endpoint = endpoint
+            data = progress.json()
+        # Replace the "." with "[dot]", will replace back when getting from kvstore.
+        data = data.replace('.', "[dot]")
+        r = requests.post(new_endpoint, data=data, headers=self._json_header, verify=False)
+        assert r.status_code in (201, 200)
