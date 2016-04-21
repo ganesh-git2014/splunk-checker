@@ -96,7 +96,7 @@ class SplunkCluster(object):
         self.other_peer_list = []
 
     def stop_cluster(self):
-        progress = Progress(self.cluster_id, 'stop_cluster')
+        progress = Progress(self.cluster_id, 'stopping_cluster')
         for splunk in self.master_list:
             progress.add_watch_object(splunk.name)
             post_progress(progress)
@@ -117,7 +117,7 @@ class SplunkCluster(object):
         self._wait_for_all_progress_done(progress)
 
     def start_cluster(self):
-        progress = Progress(self.cluster_id, 'start_cluster')
+        progress = Progress(self.cluster_id, 'starting_cluster')
         for splunk in self.master_list:
             progress.add_watch_object(splunk.name)
             post_progress(progress)
@@ -144,7 +144,7 @@ class SplunkCluster(object):
         splunk.execute("start --accept-license --answer-yes")
 
     def upgrade_cluster(self, branch, build, package_type):
-        progress = Progress(self.cluster_id, 'upgrade_cluster')
+        progress = Progress(self.cluster_id, 'upgrading_cluster')
         # Upgrade master first.
         for splunk in self.master_list:
             progress.add_watch_object(splunk.name)

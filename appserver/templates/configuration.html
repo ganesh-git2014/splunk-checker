@@ -106,6 +106,26 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     h4 {
         font-family: "Arial Rounded MT Bold";
     }
+
+    #upgradeProgress {
+        position: relative;
+        width: 100%;
+        height: 30px;
+        background-color: #ddd;
+    }
+
+    #upgradeBar {
+        position: absolute;
+        width: 0;
+        height: 100%;
+        background-color: black;
+    }
+
+    #upgradeLabel {
+        text-align: center;
+        line-height: 30px;
+        color: lightgoldenrodyellow;
+    }
 </style>
 <body>
     <div id="header">
@@ -147,6 +167,38 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         <input id="host_password" required><br>
         <input type="submit" id="add_peer_btn" value="Add Peer!">
     </form>
+    </div>
+
+    <div id="result_section">
+    <h4>Cluster Info from REST:</h4>
+    <ul id="info_list">
+    </ul>
+    </div>
+
+    <div class="input_form">
+    <form id="upgrade_cluster_form">
+        <h4>Upgrade Specific Cluster</h4>
+        Cluster ID:<br>
+        <input id="cluster_id_upgrade" required><br>
+        The branch (e.g current/galaxy):<br>
+        <input id="branch" required><br>
+        Build (e.g f2c836328108):<br>
+        <input id="build" value="latest"><br>
+        Package Type:<br>
+        <select id="package_type">
+            <option selected value="splunk">Splunk</option>
+            <option value="universalforwarder">Universal Forwarder</option>
+        </select><br>
+        <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
+    </form>
+        <br>
+        <div id="upgradeProgress">
+            <div id="upgradeBar">
+                <div id="upgradeLabel">0%</div>
+            </div>
+        </div>
+        <ul id="upgrade_progress">
+        </ul>
     </div>
 
     <!--Splunk will put the files under appserver/static/ to someplace like this-->
@@ -279,77 +331,82 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         }
                     }
                     // Send upgrade info.
+                    var cluster_id = $("#cluster_id_upgrade").val();
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster",
                         type: 'POST',
                         data: {
                             name: "test",
-                            cluster_id: $("#cluster_id_upgrade").val(),
+                            cluster_id: cluster_id,
                             branch: $("#branch").val(),
                             build: $("#build").val(),
                             package_type: $("#package_type").val()
                         },
                         success: function (data) {
-                            //TODO: Display upgrade success or fail info.
-                            alert('Upgrade Done!');
+                            showProgress(cluster_id);
                         }
                     });
                 });
 
                 // Show progress of upgrade.
-                var upgrade_progress_num = 1;
-                function showProgress () {
-                    // Set to init status.
-                    $("#upgrade_progress").load(location.href + " #upgrade_progress");
-                    // Get upgrade progress.
-                    $.ajax({
-                        url: "/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
-                        type: 'GET',
-                        success: function (data) {
-                            for (var i = 0; i < data.entry.length; ++i) {
-                                upgrade_progress_num = data.entry.length;
-                                var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
-                                var output = JSON.stringify(json_obj, null, 4);
-                                $("#upgrade_progress").append("<li><pre>" + output + "</pre></li>")
+                function showProgress(cluster_id) {
+                    var elem = $("#upgradeBar")[0];
+                    var width = 0;
+                    var init_width = 0;
+                    var id = setInterval(function(){frame(cluster_id);}, 500);
+                    var label = $("#upgradeLabel")[0];
+                    var label_content = "";
+
+                    function frame(cluster_id) {
+                        $.ajax({
+                            url: "/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
+                            type: 'GET',
+                            success: function (data) {
+                                // Analyze progress from rest endpoint.
+                                var finish_num = 0;
+                                var total_num = 0;
+                                for (var i = 0; i < data.entry.length; ++i) {
+                                    var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
+                                    if (json_obj.cluster_id === cluster_id){
+                                        label_content = json_obj.name;
+                                        // Check progress.
+                                        for (var peer in json_obj.progress) {
+                                            total_num++;
+                                            if (json_obj.progress[peer] === "Done") {
+                                                finish_num++;
+                                            }
+                                        }
+                                    }
+                                }
+                                switch(label_content){
+                                    case "stopping_cluster":
+                                        init_width = 0;
+                                        width = init_width + finish_num/total_num * 100 / 4;
+                                        break;
+                                    case "upgrading_cluster":
+                                        init_width = 1/4 * 100;
+                                        width = init_width + finish_num/total_num * 100 / 2;
+                                        break;
+                                    case "starting_cluster":
+                                        init_width = 3/4 * 100;
+                                        width = init_width + finish_num/total_num * 100 / 4;
+                                        break;
+                                }
+                                // Update the progress bar.
+                                elem.style.width = width + '%';
+                                label_content += ': ' + finish_num + '/' + total_num;
+                                label.innerHTML = label_content;
+                                if (width >= 100) {
+                                    clearInterval(id);
+                                }
                             }
-                        }
-                    });
-                    if (upgrade_progress_num == 0) {
-                        return
+                        });
                     }
-                    setTimeout(showProgress, 1000);
                 }
-                showProgress()
+                showProgress("systest-auto-sh")
             });
         });
     </script>
-
-    <div id="result_section">
-    <h4>Cluster Info from REST:</h4>
-    <ul id="info_list">
-    </ul>
-    </div>
-
-    <div class="input_form">
-    <form id="upgrade_cluster_form">
-        <h4>Upgrade Specific Cluster</h4>
-        Cluster ID:<br>
-        <input id="cluster_id_upgrade" required><br>
-        The branch (e.g current/galaxy):<br>
-        <input id="branch" required><br>
-        Build (e.g f2c836328108):<br>
-        <input id="build" value="latest"><br>
-        Package Type:<br>
-        <select id="package_type">
-            <option selected value="splunk">Splunk</option>
-            <option value="universalforwarder">Universal Forwarder</option>
-        </select><br>
-        <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
-    </form>
-        <br>
-        <ul id="upgrade_progress">
-        </ul>
-    </div>
 
 </body>
 </html>
