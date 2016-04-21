@@ -296,18 +296,30 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                     });
                 });
 
-                // Get upgrade progress.
-                $.ajax({
-                    url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
-                    type: 'GET',
-                    success: function (data){
-                        for (var i=0; i < data.entry.length; ++i) {
-                            var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
-                            var output = JSON.stringify(json_obj, null, 4);
-                            $("#upgrade_progress").append("<li><pre>"+output+"</pre></li>")
+                // Show progress of upgrade.
+                var upgrade_progress_num = 1;
+                function showProgress () {
+                    // Set to init status.
+                    $("#upgrade_progress").load(location.href + " #upgrade_progress");
+                    // Get upgrade progress.
+                    $.ajax({
+                        url: "/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
+                        type: 'GET',
+                        success: function (data) {
+                            for (var i = 0; i < data.entry.length; ++i) {
+                                upgrade_progress_num = data.entry.length;
+                                var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
+                                var output = JSON.stringify(json_obj, null, 4);
+                                $("#upgrade_progress").append("<li><pre>" + output + "</pre></li>")
+                            }
                         }
+                    });
+                    if (upgrade_progress_num == 0) {
+                        return
                     }
-                });
+                    setTimeout(showProgress, 1000);
+                }
+                showProgress()
             });
         });
     </script>
