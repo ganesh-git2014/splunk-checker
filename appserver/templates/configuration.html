@@ -323,6 +323,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                 $("#upgrade_cluster_form").submit(function(e){
                     // Prevent the submit action making page refresh.
                     e.preventDefault();
+
                     // Valid inputs.
                     var check_inputs = [$('#cluster_id_upgrade'), $('#branch')];
                     for (var i = 0, len = check_inputs.length; i<len; ++i) {
@@ -330,6 +331,27 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             return;
                         }
                     }
+
+                    // Check if upgrade is in progress.
+                    var is_in_progress = false;
+                    $.ajax({
+                        url: "/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
+                        type: 'GET',
+                        success: function (data) {
+                            // Analyze progress from rest endpoint.
+                            for (var i = 0; i < data.entry.length; ++i) {
+                                var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
+                                if (json_obj.cluster_id === cluster_id) {
+                                    is_in_progress = true;
+                                }
+                            }
+                        }
+                    });
+                    if (is_in_progress) {
+                        alert("The upgrade is in progress!");
+                        return;
+                    }
+
                     // Send upgrade info.
                     var cluster_id = $("#cluster_id_upgrade").val();
                     $.ajax({
@@ -348,11 +370,13 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                     });
                 });
 
+                // TODO: support displaying multiple upgrading progress.
                 // Show progress of upgrade.
                 function showProgress(cluster_id) {
                     var elem = $("#upgradeBar")[0];
                     var width = 0;
                     var init_width = 0;
+                    // Will call the function every 500ms.
                     var id = setInterval(function(){frame(cluster_id);}, 500);
                     var label = $("#upgradeLabel")[0];
                     var label_content = "";

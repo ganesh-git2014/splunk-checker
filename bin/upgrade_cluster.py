@@ -137,6 +137,8 @@ class SplunkCluster(object):
             _thread.start()
 
         self._wait_for_all_progress_done(progress)
+        # Delete the progress so it means the whole upgrade operation is done.
+        post_progress(progress, delete_progress=True)
 
     @staticmethod
     def start_wrapper(splunk):
@@ -224,15 +226,18 @@ class SplunkCluster(object):
 global SESSION_KEY, SERVER_URI
 
 
-def post_progress(progress):
+def post_progress(progress, delete_progress=False):
     """
     Used to post the progress to the KVStore.
     :param progress: a {Progress} object.
+    :param delete_progress: will delete the item from kvstore if is {True}.
     """
     helper = KVStoreHelper(SESSION_KEY)
-    helper.update_upgrade_progress(
-        os.path.join(SERVER_URI, 'servicesNS/nobody/splunk-checker/storage/collections/data/upgrade_progress'),
-        progress)
+    endpoint = os.path.join(SERVER_URI, 'servicesNS/nobody/splunk-checker/storage/collections/data/upgrade_progress')
+    if delete_progress:
+        helper.delete_upgrade_progress(endpoint, progress)
+    else:
+        helper.update_upgrade_progress(endpoint, progress)
 
 
 def get_cluster_info(server_uri, session_key, cluster_id):
@@ -298,5 +303,5 @@ if __name__ == '__main__':
                          peer_info['host_password'])
 
     cluster.stop_cluster()
-    cluster.upgrade_cluster(branch, build, package_type)
+    #cluster.upgrade_cluster(branch, build, package_type)
     cluster.start_cluster()

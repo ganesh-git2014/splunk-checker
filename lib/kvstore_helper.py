@@ -92,3 +92,12 @@ class KVStoreHelper(object):
 
     def get_upgrade_progress(self, endpoint):
         return self._get_info_from_endpoint(endpoint)
+
+    def delete_upgrade_progress(self, endpoint, progress):
+        content = self._find_kvpair_by_id(endpoint, progress.cluster_id)
+        if not content:
+            return
+        _key = content['_key']
+        delete_endpoint = os.path.join(endpoint, _key)
+        r = requests.delete(delete_endpoint, headers=self._json_header, verify=False)
+        assert r.status_code in (201, 200)
