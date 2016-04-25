@@ -107,25 +107,36 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         font-family: "Arial Rounded MT Bold";
     }
 
-    #upgradeProgress {
+    div.UpgradeBar {
         position: relative;
+        margin-bottom: 25px;
         width: 100%;
         height: 30px;
         background-color: #ddd;
     }
 
-    #upgradeBar {
+    div.ProgressBar {
         position: absolute;
         width: 0;
         height: 100%;
         background-color: black;
     }
 
-    #upgradeLabel {
+    div.ProgressLabel {
         text-align: center;
         line-height: 30px;
-        color: lightgoldenrodyellow;
+        color: gray;
     }
+
+    p.UpgradeText {
+        position: relative;
+        font-style: italic;
+        top: 30px;
+        margin-top: 0;
+        margin-bottom: 0;
+        text-align: center;
+    }
+
 </style>
 <body>
     <div id="header">
@@ -175,7 +186,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     </ul>
     </div>
 
-    <div class="input_form">
+    <div id=upgrade_container class="input_form">
     <form id="upgrade_cluster_form">
         <h4>Upgrade Specific Cluster</h4>
         Cluster ID:<br>
@@ -192,11 +203,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
     </form>
         <br>
-        <div id="upgradeProgress">
-            <div id="upgradeBar">
-                <div id="upgradeLabel">0%</div>
-            </div>
-        </div>
+        <!--To insert progress bar here.-->
     </div>
 
     <!--Splunk will put the files under appserver/static/ to someplace like this-->
@@ -355,6 +362,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
 
                     // Send upgrade info.
                     var cluster_id = $("#cluster_id_upgrade").val();
+                    showProgress(cluster_id);
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster",
                         type: 'POST',
@@ -366,23 +374,21 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             package_type: $("#package_type").val()
                         },
                         success: function (data) {
-                            showProgress(cluster_id);
                         }
                     });
                 });
-
-                // TODO: support displaying multiple upgrading progress.
+                
                 // Show progress of upgrade.
                 function showProgress(cluster_id) {
-                    var elem = $("#upgradeBar")[0];
+                    var upgrade_container = $("#upgrade_container")[0];
+                    var [prgress_bar, progress_label] = addProgressBar(cluster_id, upgrade_container);
                     var width = 0;
                     var init_width = 0;
                     // Will call the function every 500ms.
-                    var id = setInterval(function(){frame(cluster_id);}, 500);
-                    var label = $("#upgradeLabel")[0];
-                    var label_content = "";
+                    var id = setInterval(function(){frame(cluster_id);}, 1000);
 
                     function frame(cluster_id) {
+                        var label_content = "";
                         $.ajax({
                             url: "/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
                             type: 'GET',
@@ -392,7 +398,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                                 var total_num = 0;
                                 for (var i = 0; i < data.entry.length; ++i) {
                                     var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
-                                    if (json_obj.cluster_id === cluster_id){
+                                    if (json_obj.cluster_id === cluster_id) {
                                         label_content = json_obj.name;
                                         // Check progress.
                                         for (var peer in json_obj.progress) {
@@ -403,30 +409,63 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                                         }
                                     }
                                 }
-                                switch(label_content){
-                                    case "stopping_cluster":
-                                        init_width = 0;
-                                        width = init_width + finish_num/total_num * 100 / 4;
-                                        break;
-                                    case "upgrading_cluster":
-                                        init_width = 1/4 * 100;
-                                        width = init_width + finish_num/total_num * 100 / 2;
-                                        break;
-                                    case "starting_cluster":
-                                        init_width = 3/4 * 100;
-                                        width = init_width + finish_num/total_num * 100 / 4;
-                                        break;
+                                if (label_content) {
+                                    switch (label_content) {
+                                        case "stopping_cluster":
+                                            init_width = 0;
+                                            width = init_width + finish_num / total_num * 100 / 4;
+                                            break;
+                                        case "upgrading_cluster":
+                                            init_width = 1 / 4 * 100;
+                                            width = init_width + finish_num / total_num * 100 / 2;
+                                            break;
+                                        case "starting_cluster":
+                                            init_width = 3 / 4 * 100;
+                                            width = init_width + finish_num / total_num * 100 / 4;
+                                            break;
+                                    }
+                                    // Update the progress bar.
+                                    prgress_bar.style.width = width + '%';
+                                    label_content += '(' + finish_num + '/' + total_num + ')';
+                                    progress_label.innerHTML = label_content;
                                 }
-                                // Update the progress bar.
-                                elem.style.width = width + '%';
-                                label_content += ': ' + finish_num + '/' + total_num;
-                                label.innerHTML = label_content;
-                                if (width >= 100) {
+                                else {
+                                    // The upgrade is finished if cannot find corresponding progress from kvstore.
+                                    prgress_bar.style.width = '100%';
+                                    label_content += 'Finish!';
+                                    progress_label.innerHTML = label_content;
                                     clearInterval(id);
                                 }
                             }
                         });
                     }
+                }
+
+                function addProgressBar(cluster_id, container_elem) {
+                    /**
+                     * Add a progress bar element at the end of given element.
+                     * @param cluster_id: the cluster id to display on the progress bar.
+                     * @param container_elem: the element to append the created progress bar.
+                     * @return
+                     */
+                    var upgrade_bar = createElement("div", {"className": "UpgradeBar"});
+                    var progress_bar = createElement("div", {"className": "ProgressBar"});
+                    var progress_label = createElement("div", {"className": "ProgressLabel", "innerHTML": "0%"});
+                    container_elem.appendChild(upgrade_bar);
+                    upgrade_bar.appendChild(progress_bar);
+                    upgrade_bar.appendChild(createElement("p", {"className": "UpgradeText", "innerHTML": cluster_id}));
+                    progress_bar.appendChild(progress_label);
+                    return [progress_bar, progress_label];
+                }
+
+                function createElement(name, props) {
+                    /**
+                     * This is a helper function to create element with properties.
+                     */
+                    var el = document.createElement(name);
+                    for (var p in props)
+                        el[p] = props[p];
+                    return el;
                 }
             });
         });
