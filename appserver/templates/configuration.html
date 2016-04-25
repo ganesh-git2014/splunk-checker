@@ -197,8 +197,6 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                 <div id="upgradeLabel">0%</div>
             </div>
         </div>
-        <ul id="upgrade_progress">
-        </ul>
     </div>
 
     <!--Splunk will put the files under appserver/static/ to someplace like this-->
@@ -332,6 +330,9 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         }
                     }
 
+                    // Enable progress bar
+                    var progress_bar = $("#upgradeProgress")[0];
+
                     // Check if upgrade is in progress.
                     var is_in_progress = false;
                     $.ajax({
@@ -427,7 +428,6 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         });
                     }
                 }
-                showProgress("systest-auto-sh")
             });
         });
     </script>

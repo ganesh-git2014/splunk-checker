@@ -39,6 +39,7 @@ class StoreCluster(admin.MConfigHandler):
             self.supportedArgs.addReqArg('package_type')
         return
 
+    # TODO: Support long pulling.
     def handleList(self, confInfo):
         """
         List the progress of upgrading from kvstore.

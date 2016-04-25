@@ -17,6 +17,7 @@ from helmut.splunk import SSHSplunk
 from helmut.splunk.windowsssh import WindowsSSHSplunk
 from helmut.ssh.connection import SSHConnection
 from helmut.splunk.dynamic import SplunkFactory
+from helmut.log import Logging
 
 path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
 sys.path.append(path_prepend)
@@ -89,8 +90,10 @@ class Progress(object):
         return json.dumps(result)
 
 
-class SplunkCluster(object):
+class SplunkCluster(Logging):
     def __init__(self, cluster_id):
+        # Use helmut logging system.
+        super(SplunkCluster, self).__init__()
         self.cluster_id = cluster_id
         self.master_list = []
         self.other_peer_list = []
@@ -101,6 +104,7 @@ class SplunkCluster(object):
             progress.add_watch_object(splunk.name)
             post_progress(progress)
             splunk.stop()
+            self.logger.info("{0} has stopped.".format(splunk.name))
             progress.update_watch_object(splunk.name, 0)
             post_progress(progress)
 
@@ -109,12 +113,16 @@ class SplunkCluster(object):
             return
         pool = ThreadPool(processes=num_peer)
         for splunk in self.other_peer_list:
-            async_result = pool.apply_async(splunk.stop)
+            async_result = pool.apply_async(self.stop_wrapper, (splunk,))
             progress.add_watch_object(splunk.name)
             _thread = self.ProgressThread(progress, splunk.name, async_result)
             _thread.start()
 
         self._wait_for_all_progress_done(progress)
+
+    def stop_wrapper(self, splunk):
+        splunk.stop()
+        self.logger.info("{0} has stopped.".format(splunk.name))
 
     def start_cluster(self):
         progress = Progress(self.cluster_id, 'starting_cluster')
@@ -122,6 +130,7 @@ class SplunkCluster(object):
             progress.add_watch_object(splunk.name)
             post_progress(progress)
             self.start_wrapper(splunk)
+            self.logger.info("{0} has started.".format(splunk.name))
             progress.update_watch_object(splunk.name, 0)
             post_progress(progress)
 
@@ -140,10 +149,10 @@ class SplunkCluster(object):
         # Delete the progress so it means the whole upgrade operation is done.
         post_progress(progress, delete_progress=True)
 
-    @staticmethod
-    def start_wrapper(splunk):
+    def start_wrapper(self, splunk):
         # Replace the helmut start method to support more arguments.
         splunk.execute("start --accept-license --answer-yes")
+        self.logger.info("{0} has started.".format(splunk.name))
 
     def upgrade_cluster(self, branch, build, package_type):
         progress = Progress(self.cluster_id, 'upgrading_cluster')
@@ -160,29 +169,35 @@ class SplunkCluster(object):
             return
         pool = ThreadPool(processes=num_peer)
         for splunk in self.other_peer_list:
-            async_result = pool.apply_async(self.upgrade_wrapper, (splunk, branch, build, package_type))
+            async_result = pool.apply_async(self.upgrade_wrapper, (splunk, branch, build, package_type,))
             progress.add_watch_object(splunk.name)
             _thread = self.ProgressThread(progress, splunk.name, async_result)
             _thread.start()
 
         self._wait_for_all_progress_done(progress)
 
-    @staticmethod
-    def upgrade_wrapper(splunk, branch, build, package_type):
+    def upgrade_wrapper(self, splunk, branch, build, package_type):
         """
         Wrap the upgrade method so that it can have these inputs by sequence.
         """
         splunk.migrate_nightly(branch=branch, build=build, package_type=package_type)
+        self.logger.info("{0} has upgraded successfully.".format(splunk.name))
 
-    def _wait_for_all_progress_done(self, progress, interval=1):
+    def _wait_for_all_progress_done(self, progress, interval=0.5):
+        last_progress_json = ''
         while True:
-            post_progress(progress)
+            # Post progress if the progress has updated.
+            if last_progress_json != progress.json():
+                last_progress_json = progress.json()
+                post_progress(progress)
+
             for item in progress.progress.values():
                 if item == Progress.InProgress:
                     break
             else:
                 # This break will break the outside loop!
                 break
+
             time.sleep(interval)
 
     def add_peer(self, splunk_home, role, host, user, password):
@@ -196,7 +211,12 @@ class SplunkCluster(object):
         """
         # Fixme: does it need to set `domain` for Windows?
         # TODO: make connection also multi threaded.
-        conn = SSHConnection(host=str(host), user=str(user), password=str(password), domain='')
+        try:
+            conn = SSHConnection(host=str(host), user=str(user), password=str(password), domain='')
+        except Exception, e:
+            self.logger.error("SSH connect failed on {host}".format(host=host), exc_info=True)
+            raise e
+
         splunk = SplunkFactory().getSplunk(str(splunk_home), name=conn.host, connection=conn)
         splunk._splunk_home = splunk_home
 
@@ -277,6 +297,7 @@ def test_single_instance():
     splunk.install_nightly(branch=branch, build=build, package_type=package_type)
 
 
+# TODO: handle exceptions.
 if __name__ == '__main__':
     global SESSION_KEY, SERVER_URI
     parser = OptionParser()
@@ -303,5 +324,5 @@ if __name__ == '__main__':
                          peer_info['host_password'])
 
     cluster.stop_cluster()
-    #cluster.upgrade_cluster(branch, build, package_type)
+    cluster.upgrade_cluster(branch, build, package_type)
     cluster.start_cluster()
