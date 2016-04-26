@@ -325,9 +325,16 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                 $("#rf").val(localStorage.getItem("rf"));
                 $("#sf").val(localStorage.getItem("sf"));
 
-                $("#upgrade_cluster_form").submit(function(e){
+                var upgradeForm = document.getElementById("upgrade_cluster_form");
+                upgradeForm.addEventListener("submit", function(e){
                     // Prevent the submit action making page refresh.
                     e.preventDefault();
+
+                    // Trigger the progress bar display again.
+                    if (!IS_SHOW_PROGRESS) {
+                        showProgress();
+                        IS_SHOW_PROGRESS = true;
+                    }
 
                     // Valid inputs.
                     var check_inputs = [$('#cluster_id_upgrade'), $('#branch')];
@@ -337,11 +344,8 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         }
                     }
 
-                    // Enable progress bar
-                    var progress_bar = $("#upgradeProgress")[0];
-
                     // Check if upgrade is in progress.
-                    var is_in_progress = false;
+                    var cluster_id = $("#cluster_id_upgrade").val();
                     $.ajax({
                         url: "/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
                         type: 'GET',
@@ -350,19 +354,17 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             for (var i = 0; i < data.entry.length; ++i) {
                                 var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
                                 if (json_obj.cluster_id === cluster_id) {
-                                    is_in_progress = true;
+                                    alert("The upgrade is in progress!");
+                                    return;
                                 }
                             }
+                            startUpgrade(cluster_id);
                         }
                     });
-                    if (is_in_progress) {
-                        alert("The upgrade is in progress!");
-                        return;
-                    }
+                });
 
+                function startUpgrade(cluster_id) {
                     // Send upgrade info.
-                    var cluster_id = $("#cluster_id_upgrade").val();
-                    showProgress(cluster_id);
                     $.ajax({
                         url:"/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster",
                         type: 'POST',
@@ -376,78 +378,99 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                         success: function (data) {
                         }
                     });
-                });
-                
-                // Show progress of upgrade.
-                function showProgress(cluster_id) {
-                    var upgrade_container = $("#upgrade_container")[0];
-                    var [prgress_bar, progress_label] = addProgressBar(cluster_id, upgrade_container);
-                    var width = 0;
-                    var init_width = 0;
-                    // Will call the function every 500ms.
-                    var id = setInterval(function(){frame(cluster_id);}, 1000);
+                }
 
-                    function frame(cluster_id) {
+                var INIT_UPGRADE_CONTAINER = $("#upgrade_container").clone();
+                var IS_SHOW_PROGRESS = true;
+                //showProgress();
+                // Show progress of upgrade.
+                function showProgress() {
+                    // Reset to init appearance.
+                    var upgrade_container = $("#upgrade_container");
+                    upgrade_container.replaceWith(INIT_UPGRADE_CONTAINER);
+                    upgrade_container = upgrade_container[0];
+                    var progress_elements = {};
+                    frame();
+
+                    function frame() {
                         var label_content = "";
                         $.ajax({
                             url: "/en-US/splunkd/__raw/servicesNS/nobody/splunk-checker/splunk_checker/upgrade_cluster?output_mode=json",
                             type: 'GET',
                             success: function (data) {
+                                // No progress can be found.
+                                if (data.entry.length === 0) {
+                                    IS_SHOW_PROGRESS = false;
+                                    return;
+                                }
+
                                 // Analyze progress from rest endpoint.
                                 var finish_num = 0;
                                 var total_num = 0;
                                 for (var i = 0; i < data.entry.length; ++i) {
                                     var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
-                                    if (json_obj.cluster_id === cluster_id) {
-                                        label_content = json_obj.name;
-                                        // Check progress.
-                                        for (var peer in json_obj.progress) {
-                                            total_num++;
-                                            if (json_obj.progress[peer] === "Done") {
-                                                finish_num++;
-                                            }
+                                    var cluster_id = json_obj.cluster_id;
+                                    if (!(cluster_id in progress_elements)) {
+                                        // Add the progress bar.
+                                        progress_elements[cluster_id] = addProgressBar(cluster_id);
+                                    }
+
+                                    var [progress_bar, progress_label] = progress_elements[cluster_id];
+                                    label_content = json_obj.name;
+                                    // Check progress.
+                                    for (var peer in json_obj.progress) {
+                                        total_num++;
+                                        if (json_obj.progress[peer] === "Done") {
+                                            finish_num++;
                                         }
                                     }
-                                }
-                                if (label_content) {
-                                    switch (label_content) {
-                                        case "stopping_cluster":
-                                            init_width = 0;
-                                            width = init_width + finish_num / total_num * 100 / 4;
-                                            break;
-                                        case "upgrading_cluster":
-                                            init_width = 1 / 4 * 100;
-                                            width = init_width + finish_num / total_num * 100 / 2;
-                                            break;
-                                        case "starting_cluster":
-                                            init_width = 3 / 4 * 100;
-                                            width = init_width + finish_num / total_num * 100 / 4;
-                                            break;
-                                    }
-                                    // Update the progress bar.
-                                    prgress_bar.style.width = width + '%';
-                                    label_content += '(' + finish_num + '/' + total_num + ')';
-                                    progress_label.innerHTML = label_content;
-                                }
-                                else {
-                                    // The upgrade is finished if cannot find corresponding progress from kvstore.
-                                    prgress_bar.style.width = '100%';
-                                    label_content += 'Finish!';
-                                    progress_label.innerHTML = label_content;
-                                    clearInterval(id);
+                                    setProgressBar(progress_bar, progress_label, label_content, finish_num, total_num);
                                 }
                             }
                         });
+                        setTimeout(frame, 1000);
                     }
                 }
 
-                function addProgressBar(cluster_id, container_elem) {
+                function setProgressBar(progress_bar, progress_label, label_content, finish_num, total_num) {
+                    var init_width = 0, width = 0;
+                    if (label_content) {
+                        switch (label_content) {
+                            case "stopping_cluster":
+                                init_width = 0;
+                                width = init_width + finish_num / total_num * 100 / 4;
+                                break;
+                            case "upgrading_cluster":
+                                init_width = 1 / 4 * 100;
+                                width = init_width + finish_num / total_num * 100 / 2;
+                                break;
+                            case "starting_cluster":
+                                init_width = 3 / 4 * 100;
+                                width = init_width + finish_num / total_num * 100 / 4;
+                                break;
+                        }
+                        // Update the progress bar.
+                        progress_bar.style.width = width + '%';
+                        label_content += '(' + finish_num + '/' + total_num + ')';
+                        progress_label.innerHTML = label_content;
+                    }
+                    else {
+                        // The upgrade is finished if cannot find corresponding progress from kvstore.
+                        progress_bar.style.width = '100%';
+                        label_content += 'Finish!';
+                        progress_label.innerHTML = label_content;
+                    }
+                }
+
+                // TODO: Add more details with onmouseenter event.
+                function addProgressBar(cluster_id) {
                     /**
                      * Add a progress bar element at the end of given element.
                      * @param cluster_id: the cluster id to display on the progress bar.
                      * @param container_elem: the element to append the created progress bar.
                      * @return
                      */
+                    var container_elem = $("#upgrade_container")[0];
                     var upgrade_bar = createElement("div", {"className": "UpgradeBar"});
                     var progress_bar = createElement("div", {"className": "ProgressBar"});
                     var progress_label = createElement("div", {"className": "ProgressLabel", "innerHTML": "0%"});
