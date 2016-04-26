@@ -393,7 +393,9 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                     upgrade_container = upgrade_container[0];
                     // Add event listener again since the form element is a fresh one now!
                     $("#upgrade_cluster_form")[0].addEventListener("submit", submitUpgrade);
+
                     var progress_elements = {};
+                    var progress_done = {};
                     frame();
 
                     function frame() {
@@ -409,9 +411,13 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                                 }
 
                                 // Analyze progress from rest endpoint.
-                                var finish_num = 0;
-                                var total_num = 0;
+                                var total_num, finish_num;
+                                for (var id in progress_done) {
+                                    progress_done[id] = true;
+                                }
                                 for (var i = 0; i < data.entry.length; ++i) {
+                                    finish_num = 0;
+                                    total_num = 0;
                                     var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
                                     var cluster_id = json_obj.cluster_id;
                                     if (!(cluster_id in progress_elements)) {
@@ -428,7 +434,16 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                                             finish_num++;
                                         }
                                     }
+                                    progress_done[cluster_id] = false;
                                     setProgressBar(progress_bar, progress_label, label_content, finish_num, total_num);
+                                }
+                                for (var id in progress_done) {
+                                    if (progress_done[id]) {
+                                        // Set to show `finish`.
+                                        [progress_bar, progress_label] = progress_elements[id];
+                                        setProgressBar(progress_bar, progress_label, "", 0, 0);
+                                        delete progress_done[id];
+                                    }
                                 }
                             }
                         });
