@@ -326,7 +326,9 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                 $("#sf").val(localStorage.getItem("sf"));
 
                 var upgradeForm = document.getElementById("upgrade_cluster_form");
-                upgradeForm.addEventListener("submit", function(e){
+                upgradeForm.addEventListener("submit", submitUpgrade);
+
+                function submitUpgrade(e){
                     // Prevent the submit action making page refresh.
                     e.preventDefault();
 
@@ -361,7 +363,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             startUpgrade(cluster_id);
                         }
                     });
-                });
+                }
 
                 function startUpgrade(cluster_id) {
                     // Send upgrade info.
@@ -382,13 +384,15 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
 
                 var INIT_UPGRADE_CONTAINER = $("#upgrade_container").clone();
                 var IS_SHOW_PROGRESS = true;
-                //showProgress();
+                showProgress();
                 // Show progress of upgrade.
                 function showProgress() {
                     // Reset to init appearance.
                     var upgrade_container = $("#upgrade_container");
                     upgrade_container.replaceWith(INIT_UPGRADE_CONTAINER);
                     upgrade_container = upgrade_container[0];
+                    // Add event listener again since the form element is a fresh one now!
+                    $("#upgrade_cluster_form")[0].addEventListener("submit", submitUpgrade);
                     var progress_elements = {};
                     frame();
 
