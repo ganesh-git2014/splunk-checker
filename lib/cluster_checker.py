@@ -153,11 +153,13 @@ class ClusterChecker(object):
         # Check server.conf if using the default certification.
         for result in check_results:
             if not self.enable_ssl:
-                if result['server']['sslConfig']['sslKeysfile'] != 'server.pem' or \
-                                result['server']['sslConfig']['caCertFile'] != 'cacert.pem':
-                    self._add_warning_message(msg_list,
-                                              '[{0}] is not using default certificate in server.conf!'.format(
-                                                  result['splunk_uri']), Severity.ELEVATED)
+                # TODO: the conf changes in Honeybuzz.
+                if 'sslKeysfile' in result['server']['sslConfig'] and 'caCertFile' in result['server']['sslConfig']:
+                    if (not result['server']['sslConfig']['sslKeysfile'].endswith('server.pem')) or \
+                            (not result['server']['sslConfig']['caCertFile'].endswith('cacert.pem')):
+                        self._add_warning_message(msg_list,
+                                                  '[{0}] is not using default certificate in server.conf!'.format(
+                                                      result['splunk_uri']), Severity.ELEVATED)
         # Check inputs.conf if using the default certification.
         for result in check_results:
             if 'inputs' in result:
@@ -359,19 +361,19 @@ class ClusterChecker(object):
 
 if __name__ == '__main__':
     checker1 = ClusterChecker('env1')
-    checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
-    checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
+    # checker1.add_peer('https://systest-auto-master:1901', 'master', 'admin', 'changed')
+    # checker1.add_peer('https://systest-auto-sh1:1901', 'searchhead', 'admin', 'changed')
+    # checker1.add_peer('https://systest-auto-sh2:1901', 'searchhead', 'admin', 'changed')
+    # checker1.add_peer('https://systest-auto-idx1:1901', 'indexer', 'admin', 'changed')
+    # checker1.add_peer('https://systest-auto-fwd1:1901', 'forwarder', 'admin', 'changed')
 
-    # checker1.add_peer('https://qa-systest-04.sv.splunk.com:1901', 'master', 'admin', 'changed')
-    # checker1.add_peer('https://qa-systest-01.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
-    # checker1.add_peer('https://qa-systest-02.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
-    # checker1.add_peer('https://qa-systest-03.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
-    # checker1.add_peer('https://qa-systest-05.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
-    # checker1.add_peer('https://qa-systest-06.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
-    # checker1.add_peer('https://qa-systest-07.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
+    checker1.add_peer('https://qa-systest-58.sv.splunk.com:1901', 'master', 'admin', 'changed')
+    checker1.add_peer('https://qa-systest-65.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
+    checker1.add_peer('https://qa-systest-66.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
+    checker1.add_peer('https://qa-systest-67.sv.splunk.com:1901', 'searchhead', 'admin', 'changed')
+    checker1.add_peer('https://qa-systest-59.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
+    checker1.add_peer('https://qa-systest-60.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
+    checker1.add_peer('https://qa-systest-61.sv.splunk.com:1901', 'indexer', 'admin', 'changed')
     # checker1.add_peer('https://qa-systest-51.sv.splunk.com:1901', 'forwarder', 'admin', 'changed')
     # checker1.add_peer('https://qa-systest-52.sv.splunk.com:1901', 'forwarder', 'admin', 'changed')
 
