@@ -4,6 +4,7 @@
 @since: 3/8/16
 '''
 import sys
+import threading
 from xml.sax import saxutils
 import xml.etree.ElementTree as ElementTree
 # import default
@@ -78,6 +79,34 @@ def do_scheme():
     print SCHEME
 
 
+class CheckThread(threading.Thread):
+    def __init__(self, cluster_info):
+        threading.Thread.__init__(self)
+        self.cluster_info = cluster_info
+
+    def run(self):
+        # Init checker.
+        enable_shcluster = True if self.cluster_info['enable_shcluster'] == 'True' else False
+        enable_cluster = True if self.cluster_info['enable_cluster'] == 'True' else False
+        checker = ClusterChecker(self.cluster_info['cluster_id'], enable_shcluster, enable_cluster,
+                                 int(self.cluster_info['search_factor']), int(self.cluster_info['replication_factor']))
+        for peer_info in self.cluster_info['peers']:
+            checker.add_peer(peer_info['splunk_uri'], peer_info['role'], peer_info['username'], peer_info['password'])
+
+        # Start checking.
+        results, warning_messages = checker.check_all_items(return_event=True)
+        
+        # Send events.
+        init_stream()
+        for item in checker.check_points:
+            if results:
+                send_data(results[item], 'check_stats', item)
+                send_data(warning_messages[item], 'warning_msg', item)
+            else:
+                send_data('Exception occurs when checking this cluster.', 'warning_msg', item)
+        fini_stream()
+
+
 def run():
     # Read the settings
     config_xml = sys.stdin.read()
@@ -97,32 +126,9 @@ def run():
     else:
         raise Exception('Failed to get cluster info from kvstore.')
 
-    # Init all checkers.
     checker_list = []
     for cluster_info in cluster_info_list:
-        enable_shcluster = True if cluster_info['enable_shcluster'] == 'True' else False
-        enable_cluster = True if cluster_info['enable_cluster'] == 'True' else False
-        checker = ClusterChecker(cluster_info['cluster_id'], enable_shcluster, enable_cluster,
-                                 int(cluster_info['search_factor']), int(cluster_info['replication_factor']))
-        for peer_info in cluster_info['peers']:
-            checker.add_peer(peer_info['splunk_uri'], peer_info['role'], peer_info['username'], peer_info['password'])
-        checker_list.append(checker)
-
-    # Send events.
-    result = dict()
-    warning_messages = dict()
-    for checker in checker_list:
-        result[checker], warning_messages[checker] = checker.check_all_items(return_event=True)
-
-    init_stream()
-    for checker in checker_list:
-        for item in checker.check_points:
-            if result[checker]:
-                send_data(result[checker][item], 'check_stats', item)
-                send_data(warning_messages[checker][item], 'warning_msg', item)
-            else:
-                send_data('Exception occurs when checking this cluster.', 'warning_msg', item)
-    fini_stream()
+        CheckThread(cluster_info).run()
 
 
 if __name__ == '__main__':
