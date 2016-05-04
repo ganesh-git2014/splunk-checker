@@ -95,7 +95,7 @@ class CheckThread(threading.Thread):
 
         # Start checking.
         results, warning_messages = checker.check_all_items(return_event=True)
-        
+
         # Send events.
         init_stream()
         for item in checker.check_points:

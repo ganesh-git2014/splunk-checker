@@ -316,12 +316,18 @@ if __name__ == '__main__':
     if package_type == 'splunk':
         package_type = None
 
-    # Init SplunkCluster.
-    cluster_info = get_cluster_info(SERVER_URI, SESSION_KEY, cluster_id)
-    cluster = SplunkCluster(cluster_id)
-    for peer_info in cluster_info['peers']:
-        cluster.add_peer(peer_info['splunk_home'], peer_info['role'], peer_info['host'], peer_info['host_username'],
-                         peer_info['host_password'])
+    progress = Progress(cluster_id, 'connecting_cluster')
+    post_progress(progress)
+    try:
+        # Init SplunkCluster.
+        cluster_info = get_cluster_info(SERVER_URI, SESSION_KEY, cluster_id)
+        cluster = SplunkCluster(cluster_id)
+        for peer_info in cluster_info['peers']:
+            cluster.add_peer(peer_info['splunk_home'], peer_info['role'], peer_info['host'], peer_info['host_username'],
+                             peer_info['host_password'])
+    except Exception, e:
+        post_progress(progress, delete_progress=True)
+        raise e
 
     cluster.stop_cluster()
     cluster.upgrade_cluster(branch, build, package_type)
