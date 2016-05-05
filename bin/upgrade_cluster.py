@@ -74,13 +74,15 @@ class Progress(object):
         self.name = name
         self.progress = dict()
 
+    def set_progress_name(self, name):
+        # Will also reset all the progress.
+        self.name = name
+        self.progress = dict()
+
     def add_watch_object(self, object_name):
         self.progress[object_name] = self.InProgress
 
     def update_watch_object(self, object_name, status):
-        # Replace the `0` (success return for splunk stop) and `None` (success return for splunk start) with "Done"
-        if not status:
-            status = self.Done
         self.progress[object_name] = status
 
     def json(self):
@@ -98,42 +100,47 @@ class SplunkCluster(Logging):
         self.cluster_id = cluster_id
         self.master_list = []
         self.other_peer_list = []
+        self.progress = Progress(cluster_id, 'initializing_cluster')
+        self._post_progress()
+
+    def _post_progress(self, delete_progress=False):
+        post_progress(self.progress, delete_progress)
+
+    def _init_progress(self, progress_name):
+        self.progress.set_progress_name(progress_name)
+        for splunk in self.master_list:
+            self.progress.add_watch_object(splunk.name)
+        for splunk in self.other_peer_list:
+            self.progress.add_watch_object(splunk.name)
+        self._post_progress()
 
     def stop_cluster(self):
-        progress = Progress(self.cluster_id, 'stopping_cluster')
+        self._init_progress('stopping_cluster')
         for splunk in self.master_list:
-            progress.add_watch_object(splunk.name)
-            post_progress(progress)
-            splunk.stop()
-            self.logger.info("{0} has stopped.".format(splunk.name))
-            progress.update_watch_object(splunk.name, 0)
-            post_progress(progress)
+            self.stop_wrapper(splunk)
+            self._post_progress()
 
         num_peer = len(self.other_peer_list)
         if num_peer == 0:
             return
         pool = ThreadPool(processes=num_peer)
+
         for splunk in self.other_peer_list:
             async_result = pool.apply_async(self.stop_wrapper, (splunk,))
-            progress.add_watch_object(splunk.name)
-            _thread = self.ProgressThread(progress, splunk.name, async_result)
-            _thread.start()
 
-        self._wait_for_all_progress_done(progress)
+        self._wait_for_all_progress_done()
 
     def stop_wrapper(self, splunk):
+        self.logger.info("{0} is stopping.".format(splunk.name))
         splunk.stop()
         self.logger.info("{0} has stopped.".format(splunk.name))
+        self.progress.update_watch_object(splunk.name, Progress.Done)
 
     def start_cluster(self):
-        progress = Progress(self.cluster_id, 'starting_cluster')
+        self._init_progress('starting_cluster')
         for splunk in self.master_list:
-            progress.add_watch_object(splunk.name)
-            post_progress(progress)
             self.start_wrapper(splunk)
-            self.logger.info("{0} has started.".format(splunk.name))
-            progress.update_watch_object(splunk.name, 0)
-            post_progress(progress)
+            self._post_progress()
 
         num_peer = len(self.other_peer_list)
         if num_peer == 0:
@@ -142,21 +149,19 @@ class SplunkCluster(Logging):
 
         for splunk in self.other_peer_list:
             async_result = pool.apply_async(self.start_wrapper, (splunk,))
-            progress.add_watch_object(splunk.name)
-            _thread = self.ProgressThread(progress, splunk.name, async_result)
-            _thread.start()
 
-        self._wait_for_all_progress_done(progress)
+        self._wait_for_all_progress_done()
         # Delete the progress so it means the whole upgrade operation is done.
-        post_progress(progress, delete_progress=True)
+        self._post_progress(delete_progress=True)
 
     def start_wrapper(self, splunk):
-        # Replace the helmut start method to support more arguments.
+        self.logger.info("{0} is starting.".format(splunk.name))
         splunk.execute("start --accept-license --answer-yes")
         self.logger.info("{0} has started.".format(splunk.name))
+        self.progress.update_watch_object(splunk.name, Progress.Done)
 
     def upgrade_cluster(self, branch, build, package_type):
-        progress = Progress(self.cluster_id, 'upgrading_cluster')
+        self._init_progress('upgrading_cluster')
 
         all_splunk_list = self.other_peer_list + self.master_list
         num_peer = len(all_splunk_list)
@@ -164,20 +169,20 @@ class SplunkCluster(Logging):
 
         for splunk in all_splunk_list:
             async_result = pool.apply_async(self.upgrade_wrapper, (splunk, branch, build, package_type,))
-            progress.add_watch_object(splunk.name)
-            _thread = self.ProgressThread(progress, splunk.name, async_result)
-            _thread.start()
 
-        self._wait_for_all_progress_done(progress)
+        self._wait_for_all_progress_done()
 
     def upgrade_wrapper(self, splunk, branch, build, package_type):
         """
         Wrap the upgrade method so that it can have these inputs by sequence.
         """
+        self.logger.info("{0} is upgrading.".format(splunk.name))
         splunk.migrate_nightly(branch=branch, build=build, package_type=package_type)
         self.logger.info("{0} has upgraded successfully.".format(splunk.name))
+        self.progress.update_watch_object(splunk.name, Progress.Done)
 
-    def _wait_for_all_progress_done(self, progress, interval=0.5):
+    def _wait_for_all_progress_done(self, interval=0.5):
+        progress = self.progress
         last_progress_json = ''
         while True:
             # Post progress if the progress has updated.
@@ -219,22 +224,6 @@ class SplunkCluster(Logging):
             self.master_list.append(splunk)
         else:
             self.other_peer_list.append(splunk)
-
-    class ProgressThread(threading.Thread):
-        def __init__(self, progress, name, async_result):
-            """
-            Used to check the progress of async results.
-            :param progress: a dict present each splunk operation progress
-            :param name: splunk instance name
-            :param async_result: async result
-            """
-            threading.Thread.__init__(self)
-            self.progress = progress
-            self.name = name
-            self.result = async_result
-
-        def run(self):
-            self.progress.update_watch_object(self.name, self.result.get())
 
 
 global SESSION_KEY, SERVER_URI
@@ -291,7 +280,8 @@ def test_single_instance():
     splunk.install_nightly(branch=branch, build=build, package_type=package_type)
 
 
-# TODO: handle exceptions.
+# TODO: handle exceptions. (e.g. ssh connection failed)
+# TODO: handle ssh execute command `hang` problem.
 if __name__ == '__main__':
     global SESSION_KEY, SERVER_URI
     parser = OptionParser()
@@ -313,17 +303,15 @@ if __name__ == '__main__':
     # Reset the logging level to INFO.
     logging.root.setLevel(logging.INFO)
 
-    progress = Progress(cluster_id, 'connecting_cluster')
-    post_progress(progress)
+    # Init SplunkCluster.
+    cluster_info = get_cluster_info(SERVER_URI, SESSION_KEY, cluster_id)
+    cluster = SplunkCluster(cluster_id)
     try:
-        # Init SplunkCluster.
-        cluster_info = get_cluster_info(SERVER_URI, SESSION_KEY, cluster_id)
-        cluster = SplunkCluster(cluster_id)
         for peer_info in cluster_info['peers']:
             cluster.add_peer(peer_info['splunk_home'], peer_info['role'], peer_info['host'], peer_info['host_username'],
                              peer_info['host_password'])
     except Exception, e:
-        post_progress(progress, delete_progress=True)
+        post_progress(cluster.progress, delete_progress=True)
         raise e
 
     cluster.stop_cluster()
