@@ -7,6 +7,7 @@ import ConfigParser
 import json
 import subprocess
 
+import sys
 from splunk import admin
 from splunk import rest
 import os
@@ -15,19 +16,33 @@ path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 sys.path.append(path_prepend)
 from kvstore_helper import KVStoreHelper
 
+
 # import default
 
 
-def read_conf_item(conf_name, stanza, item):
+def read_conf_item(conf_name, stanza, item, read_local_folder=True):
     cf = ConfigParser.ConfigParser()
     cf.optionxform = str
     current_path = os.path.dirname(os.path.abspath(__file__))
-    f = open(os.path.join(current_path.replace('/bin', '/default'), conf_name + '.conf'), 'r')
+    if read_local_folder:
+        conf_file = os.path.join(current_path.replace('/bin', '/local'), conf_name + '.conf')
+        if os.path.isfile(conf_file):
+            f = open(conf_file, 'r')
+        else:
+            return read_conf_item(conf_name, stanza, item, read_local_folder=False)
+    else:
+        f = open(os.path.join(current_path.replace('/bin', '/default'), conf_name + '.conf'), 'r')
     cf.readfp(f)
     kv_pairs = cf.items(stanza)
     for pair in kv_pairs:
         if pair[0] == item:
             return pair[1]
+    else:
+        if read_local_folder:
+            return read_conf_item(conf_name, stanza, item, read_local_folder=False)
+        else:
+            raise Exception("Cannot find {item} in {stanza} of conf {conf_name}".format(item=item, stanza=stanza,
+                                                                                        conf_name=conf_name))
 
 
 class StoreCluster(admin.MConfigHandler):

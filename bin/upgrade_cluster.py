@@ -3,6 +3,7 @@
 @contact: cuyu@splunk.com
 @since: 4/1/16
 '''
+import logging
 import sys
 import threading
 import json
@@ -315,6 +316,9 @@ if __name__ == '__main__':
         build = None
     if package_type == 'splunk':
         package_type = None
+
+    # Reset the logging level to INFO.
+    logging.root.setLevel(logging.INFO)
 
     progress = Progress(cluster_id, 'connecting_cluster')
     post_progress(progress)
