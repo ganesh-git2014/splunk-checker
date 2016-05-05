@@ -157,19 +157,12 @@ class SplunkCluster(Logging):
 
     def upgrade_cluster(self, branch, build, package_type):
         progress = Progress(self.cluster_id, 'upgrading_cluster')
-        # Upgrade master first.
-        for splunk in self.master_list:
-            progress.add_watch_object(splunk.name)
-            post_progress(progress)
-            splunk.migrate_nightly(branch=branch, build=build, package_type=package_type)
-            progress.update_watch_object(splunk.name, 0)
-            post_progress(progress)
 
-        num_peer = len(self.other_peer_list)
-        if num_peer == 0:
-            return
+        all_splunk_list = self.other_peer_list + self.master_list
+        num_peer = len(all_splunk_list)
         pool = ThreadPool(processes=num_peer)
-        for splunk in self.other_peer_list:
+
+        for splunk in all_splunk_list:
             async_result = pool.apply_async(self.upgrade_wrapper, (splunk, branch, build, package_type,))
             progress.add_watch_object(splunk.name)
             _thread = self.ProgressThread(progress, splunk.name, async_result)
