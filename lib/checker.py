@@ -58,7 +58,7 @@ class Checker(Logging):
         """
         uri = self.splunk_uri + '/services/auth/login'
         body = {'username': self.username, 'password': self.password}
-        response = requests.post(uri, data=body, verify=False, timeout=10)
+        response = requests.post(uri, data=body, verify=False, timeout=30)
 
         if response.status_code != 200:
             raise Exception('getSessionKey - unable to login; check credentials')
@@ -74,13 +74,16 @@ class Checker(Logging):
         assert endpoint.startswith('/')
         uri = self.splunk_uri + endpoint
         try:
-            response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False, timeout=10)
+            response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False, timeout=30)
         except Timeout, e:
+            self.logger.error('HTTP read timeout at `{0}`'.format(self.splunk_uri + '/' + endpoint))
             raise HTTPException('ReadTimeout', e)
         parsed_response = response.json()
         if response.status_code == 200:
             return parsed_response
         else:
+            self.logger.error(
+                'HTTP status code is {0} at `{1}`'.format(response.status_code, self.splunk_uri + '/' + endpoint))
             raise HTTPException('Response', response)
 
     def check_splunk_status(self):

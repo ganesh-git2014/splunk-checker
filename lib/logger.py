@@ -5,10 +5,13 @@
 '''
 
 import logging
+import os
 from abc import ABCMeta
 
+_CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 _LOG_FORMAT = '[%(asctime)s] %(levelname)s - %(name)s: %(message)s'
-_FILE_NAME = "splunk-checker.log"
+_FILE_NAME = os.path.join(_CURRENT_DIR, "splunk-checker.log")
 
 
 def setup_logger(debug=False):
@@ -22,6 +25,8 @@ def setup_logger(debug=False):
     if debug:
         level = logging.DEBUG
     logging.basicConfig(filename=_FILE_NAME, filemode='w', level=level, format=_LOG_FORMAT)
+    # Disable some unnecessary logs.
+    logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.WARNING)
 
 
 class Logging(object):
