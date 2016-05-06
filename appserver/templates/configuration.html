@@ -70,38 +70,41 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
         color: white;
         font-size: large;
     }
+    #wrap {
+        width: 1200px;
+        margin: auto;
+    }
     div.input_form {
         display:table;
         text-align: left;
         line-height:150%;
         font-size: 17px;
         padding-top: 20px;
-        padding-right: 50px;
+        padding-right: 30px;
         padding-bottom: 30px;
-        padding-left: 70px;
+        padding-left: 30px;
         border: solid 1px black;
         border-radius: 25px;
         margin-top: 30px;
-        margin-left: 20px;
+        margin-left: 0;
         background-color: white;
-        clear:left;
-        width: 35%;
+        float:left;
+        width: 400px;
     }
     #result_section {
         display:table;
         float:right;
         padding-top: 20px;
-        padding-right: 50px;
+        padding-right: 30px;
         padding-bottom: 30px;
-        padding-left: 50px;
+        padding-left: 30px;
         border: solid 1px black;
         border-radius: 25px;
         margin-top: 30px;
-        margin-right: 50px;
-        position: absolute;
+        margin-right: 0;
         right: 0;
         top: 80px;
-        width: 35%;
+        width: 600px;
     }
     h4 {
         font-family: "Arial Rounded MT Bold";
@@ -143,67 +146,69 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
     <h3>Configure & Upgrade</h3>
     </div>
 
-    <div class="input_form">
-    <form id="cluster_info">
-        <h4>Configure Environment for Splunk Checker</h4>
-        Cluster ID:<br>
-        <input id="cluster_id" required><br>
-        <!--The 'value' tag here seems not work!-->
-        <input type="checkbox" id="enable_cluster" value="True" checked>Enable cluster<br>
-        <div id="rf_sf">
-        RF=<input type="number" min="1" id="rf" required>SF=<input type="number" min="1" id="sf" required><br>
+    <div id="wrap">
+        <div class="input_form">
+        <form id="cluster_info">
+            <h4>Configure Environment for Splunk Checker</h4>
+            Cluster ID:<br>
+            <input id="cluster_id" required><br>
+            <!--The 'value' tag here seems not work!-->
+            <input type="checkbox" id="enable_cluster" value="True" checked>Enable cluster<br>
+            <div id="rf_sf">
+            RF=<input type="number" min="1" id="rf" required>SF=<input type="number" min="1" id="sf" required><br>
+            </div>
+            <input type="checkbox" id="enable_shcluster" value="True" checked>Enable search head cluster<br>
+            Splunk URI (e.g. https://systest-auto-idx1:1901):<br>
+            <input id="splunk_uri" type="url" required><br>
+            Splunk Username:<br>
+            <input id="username" required><br>
+            Splunk Password:<br>
+            <input id="password" required><br>
+            Role:<br>
+            <select id="role_select">
+                <option selected disabled hidden style='display: none' value=''></option>
+                <option value="master">Master</option>
+                <option value="indexer">Indexer</option>
+                <option value="searchhead">Search Head</option>
+                <option value="forwarder">Forwarder</option>
+            </select><br>
+            Splunk Home (e.g. /root/splunk):<br>
+            <input id="splunk_home"><br>
+            Host (e.g. systest-auto-idx):<br>
+            <input id="host" required><br>
+            Host Username:<br>
+            <input id="host_username" required><br>
+            Host Password:<br>
+            <input id="host_password" required><br>
+            <input type="submit" id="add_peer_btn" value="Add Peer!">
+        </form>
         </div>
-        <input type="checkbox" id="enable_shcluster" value="True" checked>Enable search head cluster<br>
-        Splunk URI (e.g. https://systest-auto-idx1:1901):<br>
-        <input id="splunk_uri" type="url" required><br>
-        Splunk Username:<br>
-        <input id="username" required><br>
-        Splunk Password:<br>
-        <input id="password" required><br>
-        Role:<br>
-        <select id="role_select">
-            <option selected disabled hidden style='display: none' value=''></option>
-            <option value="master">Master</option>
-            <option value="indexer">Indexer</option>
-            <option value="searchhead">Search Head</option>
-            <option value="forwarder">Forwarder</option>
-        </select><br>
-        Splunk Home (e.g. /root/splunk):<br>
-        <input id="splunk_home"><br>
-        Host (e.g. systest-auto-idx):<br>
-        <input id="host" required><br>
-        Host Username:<br>
-        <input id="host_username" required><br>
-        Host Password:<br>
-        <input id="host_password" required><br>
-        <input type="submit" id="add_peer_btn" value="Add Peer!">
-    </form>
-    </div>
 
-    <div id="result_section">
-    <h4>Cluster Info from REST:</h4>
-    <ul id="info_list">
-    </ul>
-    </div>
+        <div id="result_section">
+        <h4>Cluster Info from REST:</h4>
+        <ul id="info_list">
+        </ul>
+        </div>
 
-    <div id=upgrade_container class="input_form">
-    <form id="upgrade_cluster_form">
-        <h4>Upgrade Specific Cluster</h4>
-        Cluster ID:<br>
-        <input id="cluster_id_upgrade" required><br>
-        Branch (e.g. current/galaxy):<br>
-        <input id="branch" required><br>
-        Build (e.g. f2c836328108):<br>
-        <input id="build" value="latest"><br>
-        Package Type:<br>
-        <select id="package_type">
-            <option selected value="splunk">Splunk</option>
-            <option value="universalforwarder">Universal Forwarder</option>
-        </select><br>
-        <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
-    </form>
-        <br>
-        <!--To insert progress bar here.-->
+        <div id=upgrade_container class="input_form">
+        <form id="upgrade_cluster_form">
+            <h4>Upgrade Specific Cluster</h4>
+            Cluster ID:<br>
+            <input id="cluster_id_upgrade" required><br>
+            Branch (e.g. current/galaxy):<br>
+            <input id="branch" required><br>
+            Build (e.g. f2c836328108):<br>
+            <input id="build" value="latest"><br>
+            Package Type:<br>
+            <select id="package_type">
+                <option selected value="splunk">Splunk</option>
+                <option value="universalforwarder">Universal Forwarder</option>
+            </select><br>
+            <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
+        </form>
+            <br>
+            <!--To insert progress bar here.-->
+        </div>
     </div>
 
     <!--Splunk will put the files under appserver/static/ to someplace like this-->
