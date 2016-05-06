@@ -57,7 +57,7 @@ We define 3 different kind of severity, from most severe to least severe: `sever
 
 **Reason**: Because splunk do not support install python package to its own python interpreter, we use a subprocess to enable another outside python interpreter. So you need to specify the python interpreter and make sure that interpreter has `helmut` installed. (Maybe just copy the `helmut` package to the splunk python path also works! Not try yet.)
 
-**About version**: We suggest at least `python 2.7.9` and `helmut 1.2.1`. (In earlier `helmut`, splunk installing on Windows did not use *msi* package.)
+**About version**: We suggest at least `python 2.7.9` and `helmut 1.2.1`. (In earlier `helmut`, splunk installing on Windows did not use *msi* package while our app hacks something on Windows upgrade.)
 
 ## Dev Guide
 
@@ -160,6 +160,11 @@ Restart splunk, and the new check item will be found in the coming events.
 
 ## Limits
 - This app can only support installed on Linux OS. (Some `/` need to be replaced with `\` on Windows)
+
+## Known Issues
+
+- Upgrade process may hang due to `helmut` execute cmd hangs (Maybe using paramiko execute method instead could solve it.)
+- Sometimes requests get "connection refused" by remote machine (Seems caused by the TCP backlog is full, may be some connections are not recycle in time.)
 
 ## TODO List
 
