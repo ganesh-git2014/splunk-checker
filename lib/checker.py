@@ -13,6 +13,7 @@ from requests.exceptions import Timeout
 
 from conf_helper import ConfHelper
 from errors import HTTPException
+from logger import Logging
 
 
 def catch_http_exception(check_method):
@@ -31,7 +32,7 @@ def catch_http_exception(check_method):
     return wrap
 
 
-class Checker(object):
+class Checker(Logging):
     """
     The base class for splunk checkers
     """
@@ -40,12 +41,14 @@ class Checker(object):
         """
         :param splunk_uri: Specify the splunk as servername:mgmt_port or URI:mgmt_port
         """
+        super(Checker, self).__init__()
         self.splunk_uri = splunk_uri
         self.username = username
         self.password = password
         try:
             self._session_key = self._password2sessionkey()
         except:
+            self.logger.warning('Cannot get session key from `{0}`'.format(splunk_uri))
             self._session_key = None
         self._header = {'Authorization': 'Splunk %s' % self._session_key}
 
@@ -163,11 +166,13 @@ class Checker(object):
 
         return result
 
-    @staticmethod
-    def _select_dict(dict_obj, select_keys):
+    def _select_dict(self, dict_obj, select_keys):
         """
         Reserve the key value pairs using the given key list, and filter others.
         E.g. _select_dict({'a': 1, 'b': 2, 'c': 3}, ['b', 'c'])
         will return {'b': 2, 'c': 3}
         """
-        return {key: dict_obj[key] for key in select_keys}
+        try:
+            return {key: dict_obj[key] for key in select_keys}
+        except IndexError:
+            self.logger.error("Cannot select keys from dict @{0}".format(self.splunk_uri))

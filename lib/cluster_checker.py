@@ -8,13 +8,15 @@ import json
 from constant import SPLUNK_ROLE, CHECK_ITEM, Severity
 from forwarder_checker import ForwarderChecker
 from indexer_checker import IndexerChecker
+from logger import Logging
 from master_checker import MasterChecker
 from searchhead_checker import SearchHeadChecker
 
 
-class ClusterChecker(object):
+class ClusterChecker(Logging):
     def __init__(self, cluster_id, enable_shcluster=True, enable_cluster=True, search_factor=1, replication_factor=1,
                  enable_ssl=False):
+        super(ClusterChecker, self).__init__()
         # TODO: Consider multi-site cluster.
         # (May: 1. Create multi ClusterChecker instances, and add a multi-site check from outside;
         #       2. Handle the multi-site here.)
@@ -54,6 +56,10 @@ class ClusterChecker(object):
             self.indexer_checkers.append(IndexerChecker(splunk_uri, username, password))
         elif role == 'forwarder':
             self.forwarder_checkers.append(ForwarderChecker(splunk_uri, username, password))
+        else:
+            error_msg = "Undefined splunk role: {0} for `{1}`".format(role, splunk_uri)
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
 
     def _set_check_points(self):
         check_items = list(CHECK_ITEM)
@@ -76,6 +82,7 @@ class ClusterChecker(object):
         warning_msg = dict()
 
         for item in self.check_points:
+            self.logger.info('Start checking {0} on cluster: {1}'.format(item, self.cluster_id))
             check_results[item] = self._map_check_method(item)()
             exception_msg = self._check_http_exception(check_results[item])
             if exception_msg:

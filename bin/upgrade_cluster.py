@@ -5,7 +5,6 @@
 '''
 import logging
 import sys
-import threading
 import json
 from multiprocessing.pool import ThreadPool
 

@@ -16,6 +16,7 @@ sys.path.append(path_prepend)
 
 from cluster_checker import ClusterChecker
 from kvstore_helper import KVStoreHelper
+from logger import setup_logger
 
 SCHEME = """<scheme>
     <title>splunk checker</title>
@@ -108,6 +109,7 @@ class CheckThread(threading.Thread):
 
 
 def run():
+    setup_logger()
     # Read the settings
     config_xml = sys.stdin.read()
     config_parsed = ElementTree.fromstring(config_xml)
