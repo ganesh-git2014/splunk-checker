@@ -235,7 +235,7 @@ class SplunkCluster(Logging):
         self.logger.info("{0} has migrated successfully.".format(splunk.name))
         self.progress.update_watch_object(splunk.name, Progress.Done)
 
-    def _wait_for_all_progress_done(self, interval=1, timeout=1200):
+    def _wait_for_all_progress_done(self, interval=1, timeout=1800):
         progress = self.progress
         last_progress_json = ''
         now = time.time()

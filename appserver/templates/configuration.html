@@ -360,7 +360,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                             // Analyze progress from rest endpoint.
                             for (var i = 0; i < data.entry.length; ++i) {
                                 var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
-                                if (json_obj.cluster_id === cluster_id) {
+                                if (json_obj.cluster_id === cluster_id && json_obj.name != "timeout") {
                                     alert("The upgrade is in progress!");
                                     return;
                                 }
@@ -401,6 +401,7 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
 
                     var progress_elements = {};
                     var progress_done = {};
+                    var num_timeout = 0;
                     frame();
 
                     function frame() {
@@ -420,10 +421,14 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                                 for (var id in progress_done) {
                                     progress_done[id] = true;
                                 }
+                                num_timeout = 0;
                                 for (var i = 0; i < data.entry.length; ++i) {
                                     finish_num = 0;
                                     total_num = 0;
                                     var json_obj = JSON.parse(data.entry[i].content.upgrade_progress);
+                                    if (json_obj.name === 'timeout') {
+                                        num_timeout++;
+                                    }
                                     var cluster_id = json_obj.cluster_id;
                                     if (!(cluster_id in progress_elements)) {
                                         // Add the progress bar.
@@ -449,6 +454,11 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                                         setProgressBar(progress_bar, progress_label, "", 0, 0);
                                         delete progress_done[id];
                                     }
+                                }
+
+                                // Stop request to rest if all progress timeout.
+                                if (num_timeout == data.entry.length) {
+                                    IS_SHOW_PROGRESS = false;
                                 }
                             }
                         });
