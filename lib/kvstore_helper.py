@@ -32,6 +32,15 @@ class KVStoreHelper(object):
         r = requests.post(new_endpoint, data=data, headers=self._json_header, verify=False)
         assert r.status_code in (201, 200)
 
+    def delete_cluster_info(self, endpoint, cluster_id):
+        content = self._find_kvpair_by_id(endpoint, cluster_id)
+        if not content:
+            return
+        _key = content['_key']
+        delete_endpoint = os.path.join(endpoint, _key)
+        r = requests.delete(delete_endpoint, headers=self._json_header, verify=False)
+        assert r.status_code in (201, 200)
+
     def _get_info_from_endpoint(self, endpoint):
         r = requests.get(endpoint, headers=self._header, verify=False)
         assert r.status_code == 200
@@ -101,3 +110,11 @@ class KVStoreHelper(object):
         delete_endpoint = os.path.join(endpoint, _key)
         r = requests.delete(delete_endpoint, headers=self._json_header, verify=False)
         assert r.status_code in (201, 200)
+
+
+if __name__ == '__main__':
+    from lib.checker import Checker
+    checker = Checker('https://health.sv.splunk.com:8089', 'admin', 'changed')
+    session_key = checker._password2sessionkey()
+    helper = KVStoreHelper(session_key)
+    helper.delete_cluster_info('https://health.sv.splunk.com:8089/servicesNS/nobody/splunk-checker/storage/collections/data/clusterinfo', 'systest-linux-multisite')
