@@ -279,6 +279,10 @@ class SplunkCluster(Logging):
         splunk = SplunkFactory().getSplunk(str(splunk_home), name=conn.host, connection=conn)
         splunk._splunk_home = splunk_home
 
+        if not splunk.is_installed():
+            self.logger.error('Splunk home path is not correct for {0}!'.format(host))
+            raise Exception('Splunk home path is not correct for {0}!'.format(host))
+
         role = role.lower()
         if role == 'master':
             self.master_list.append(splunk)
