@@ -183,3 +183,4 @@ Restart splunk, and the new check item will be found in the coming events.
 - Auto fill the splunk home & host in configuration page
 - Support using json file as input cluster topology
 - Support installing and setting a cluster using `rack`
+- Compatibility for `Honey Buzz` ssl check

@@ -452,6 +452,10 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
                                 }
                             }
                         });
+                        // Break out.
+                        if (!IS_SHOW_PROGRESS) {
+                            return
+                        }
                         setTimeout(frame, 1000);
                     }
                 }
