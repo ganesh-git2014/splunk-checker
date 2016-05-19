@@ -56,7 +56,7 @@ class KVStoreHelper(object):
         """
         r = requests.get(endpoint, headers=self._header, verify=False)
         assert r.status_code == 200
-        parsed_response = json.loads(r.content)
+        parsed_response = json.loads(r.content.replace("[dot]", "."))
         _key = ''
         content = {}
         for kvpair in parsed_response:
