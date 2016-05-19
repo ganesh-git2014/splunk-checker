@@ -7,14 +7,15 @@ import logging
 import sys
 import json
 from multiprocessing.pool import ThreadPool
-
 from optparse import OptionParser
-
 import os
 # Helmut 1.2.1
 import time
+import re
+import requests
 from helmut.splunk import SSHSplunk
 from helmut.splunk.windowsssh import WindowsSSHSplunk
+from helmut.splunk_package import NightlyPackage
 from helmut.ssh.connection import SSHConnection
 from helmut.splunk.dynamic import SplunkFactory
 from helmut.log import Logging
@@ -22,6 +23,9 @@ from helmut.log import Logging
 path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
 sys.path.append(path_prepend)
 from kvstore_helper import KVStoreHelper
+
+CACHED_BUILDS_SERVER = 'http://10.66.128.254:8080'
+CACHED_BUILD_URL_PATTERN = '{s}/{h}/{f}'
 
 
 def get_binary_path(self_, binary):
@@ -60,6 +64,28 @@ def install_from_archive(self_, archive_path, uninstall_existing=True):
 WindowsSSHSplunk.install_from_archive = install_from_archive
 
 
+def hacked_install_from_package(self_, package, uninstall_existing=True):
+    self_.logger.info('Trying to install Splunk from {0}'.format(package))
+    sf_delay = get_remote_delay(self_.connection, 'releases.splunk.com')
+    sh_address = CACHED_BUILDS_SERVER[CACHED_BUILDS_SERVER.find('//') + 2:CACHED_BUILDS_SERVER.rfind(':')]
+    sh_delay = get_remote_delay(self_.connection, sh_address)
+    sf_url = package.get_url()
+    build_filename = sf_url.split('/')[-1]
+    sh_url = CACHED_BUILD_URL_PATTERN.format(s=CACHED_BUILDS_SERVER, h=package.branch, f=build_filename)
+    # Check if the package is exist on cache server.
+    response = requests.get(sh_url, stream=True)
+    response.close()
+    if response.status_code == 200 and sh_delay < sf_delay:
+        download_url = sh_url  # url from which we download the build
+    else:
+        download_url = sf_url
+    self_.install_from_url(download_url, uninstall_existing)
+
+
+# FIXME: 3.hack the package url to use packages in shanghai lab if faster.
+SSHSplunk.install_from_package = hacked_install_from_package
+
+
 class Progress(object):
     InProgress = "InProgress"
     Done = "Done"
@@ -90,6 +116,11 @@ class Progress(object):
         result['name'] = self.name
         result['progress'] = self.progress
         return json.dumps(result)
+
+
+class TimeoutException(BaseException):
+    def __init__(self, description):
+        self.description = description
 
 
 class SplunkCluster(Logging):
@@ -159,7 +190,22 @@ class SplunkCluster(Logging):
         self.logger.info("{0} has started.".format(splunk.name))
         self.progress.update_watch_object(splunk.name, Progress.Done)
 
-    def upgrade_cluster(self, branch, build, package_type):
+    def upgrade(self, branch, build, package_type):
+        """
+        Integrate stop, migrate, start actions together.
+        """
+        try:
+            self.stop_cluster()
+            self.logger.info('Cluster stop successfully.')
+            self.migrate_cluster(branch, build, package_type)
+            self.logger.info('Cluster migrate successfully.')
+            self.start_cluster()
+            self.logger.info('Cluster start successfully.')
+        except TimeoutException:
+            self.progress.set_progress_name('timeout')
+            self._post_progress()
+
+    def migrate_cluster(self, branch, build, package_type):
         self._init_progress('upgrading_cluster')
 
         all_splunk_list = self.other_peer_list + self.master_list
@@ -167,23 +213,34 @@ class SplunkCluster(Logging):
         pool = ThreadPool(processes=num_peer)
 
         for splunk in all_splunk_list:
-            async_result = pool.apply_async(self.upgrade_wrapper, (splunk, branch, build, package_type,))
+            async_result = pool.apply_async(self.migrate_wrapper, (splunk, branch, build, package_type,))
 
         self._wait_for_all_progress_done()
 
-    def upgrade_wrapper(self, splunk, branch, build, package_type):
+    def migrate_wrapper(self, splunk, branch, build, package_type):
         """
         Wrap the upgrade method so that it can have these inputs by sequence.
         """
-        self.logger.info("{0} is upgrading.".format(splunk.name))
-        splunk.migrate_nightly(branch=branch, build=build, package_type=package_type)
-        self.logger.info("{0} has upgraded successfully.".format(splunk.name))
+        self.logger.info("{0} is migrating.".format(splunk.name))
+        pkg = NightlyPackage(branch=branch, build=build, package_type=package_type)
+        url = pkg.get_url()
+        build_filename = url.split('/')[-1]
+        version_num, build_num = build_filename.split('-')[1:3]
+        current_version = splunk.version()
+        current_version_num = current_version.split(' ')[1]
+        current_build_num = current_version.split(' ')[-1][:-1]
+        # Skip upgrade if splunk is already the target build.
+        if not (version_num == current_version_num and build_num == current_build_num):
+            splunk.migrate_nightly(branch=branch, build=build, package_type=package_type)
+        self.logger.info("{0} has migrated successfully.".format(splunk.name))
         self.progress.update_watch_object(splunk.name, Progress.Done)
 
-    def _wait_for_all_progress_done(self, interval=0.5):
+    def _wait_for_all_progress_done(self, interval=1, timeout=1200):
         progress = self.progress
         last_progress_json = ''
-        while True:
+        now = time.time()
+        end_time = now + timeout
+        while now < end_time:
             # Post progress if the progress has updated.
             if last_progress_json != progress.json():
                 last_progress_json = progress.json()
@@ -197,6 +254,10 @@ class SplunkCluster(Logging):
                 break
 
             time.sleep(interval)
+            now = time.time()
+        else:
+            self.logger.warning('Wait progress timeout!')
+            raise TimeoutException('Wait progress timeout!')
 
     def add_peer(self, splunk_home, role, host, user, password):
         """
@@ -258,6 +319,21 @@ def get_cluster_info(server_uri, session_key, cluster_id):
             return cluster_info
 
 
+def get_remote_delay(conn, address):
+    """
+    Calculate the delay time from given remote connection to given address.
+    :param conn: instance of L{SSHConnection}.
+    :param address: string of hostname or ip.
+    :return: a number of delay (ms), or None if cannot connect.
+    """
+    result = conn.execute('ping -c 1 {0}'.format(address))
+    match = re.search('time=[0-9 .]+ms', result[1])
+    if match:
+        return float(result[1][match.regs[0][0]:match.regs[0][1]][5:-2])
+    else:
+        return None
+
+
 def test_single_instance():
     """
     Only for test.
@@ -313,6 +389,4 @@ if __name__ == '__main__':
         post_progress(cluster.progress, delete_progress=True)
         raise e
 
-    cluster.stop_cluster()
-    cluster.upgrade_cluster(branch, build, package_type)
-    cluster.start_cluster()
+    cluster.upgrade(branch, build, package_type)
