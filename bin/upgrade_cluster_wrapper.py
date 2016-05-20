@@ -81,10 +81,13 @@ class StoreCluster(admin.MConfigHandler):
         os.environ['PYTHONPATH'] = _NEW_PYTHON_PATH
         my_process = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'upgrade_cluster.py')
 
+        # Read cache build server info.
+        _CACHE_BUILD_SERVER = read_conf_item('cluster_upgrade', 'general', 'cacheBuildServer')
+
         # Pass the splunk python path as a argument of the subprocess.
         p = subprocess.Popen(
-            [os.environ['PYTHONPATH'], my_process, _SPLUNK_PYTHON_PATH, rest.makeSplunkdUri(), self.getSessionKey(),
-             cluster_id, branch, build, package_type],
+            [os.environ['PYTHONPATH'], my_process, _SPLUNK_PYTHON_PATH, _CACHE_BUILD_SERVER, rest.makeSplunkdUri(),
+             self.getSessionKey(), cluster_id, branch, build, package_type],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = p.communicate()[0]
         confInfo['upgrade']['progress'] = str(output)

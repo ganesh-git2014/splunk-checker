@@ -24,7 +24,6 @@ path_prepend = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 sys.path.append(path_prepend)
 from kvstore_helper import KVStoreHelper
 
-CACHED_BUILDS_SERVER = 'http://10.66.128.254:8080'
 CACHED_BUILD_URL_PATTERN = '{s}/{h}/{f}'
 
 
@@ -366,12 +365,14 @@ if __name__ == '__main__':
     parser = OptionParser()
     (options, args) = parser.parse_args()
     _SPLUNK_PYTHON_PATH = args[0]
+    CACHED_BUILDS_SERVER = args[1]
+
     PATH_LIST = _SPLUNK_PYTHON_PATH.split(':')
     # This step is necessary in order to load splunk packages
     for path in PATH_LIST:
         sys.path.append(path)
 
-    SERVER_URI, SESSION_KEY, cluster_id, branch, build, package_type = args[1:]
+    SERVER_URI, SESSION_KEY, cluster_id, branch, build, package_type = args[2:]
     if branch == 'current':
         branch = None
     if build == 'latest':

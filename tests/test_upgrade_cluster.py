@@ -9,7 +9,7 @@ import subprocess
 from lib.checker import Checker
 
 if __name__ == '__main__':
-    cluster_id = 'systest-auto-sh'
+    cluster_id = 'test'
     branch = 'current'
     build = 'latest'
     package_type = 'splunk'
@@ -21,6 +21,7 @@ if __name__ == '__main__':
     # TODO: remove the hard code python path.
     _NEW_PYTHON_PATH = '/usr/local/Cellar/python/2.7.11/bin/python'
     _SPLUNK_PYTHON_PATH = '/Applications/splunk/lib/python2.7/site-packages:/usr/local/Cellar/python/2.7.11/bin/python'
+    CACHED_BUILDS_SERVER = 'http://10.66.128.254:8080'
 
     os.environ['PYTHONPATH'] = _NEW_PYTHON_PATH
     file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,8 +29,8 @@ if __name__ == '__main__':
 
     # Pass the splunk python path as a argument of the subprocess.
     p = subprocess.Popen(
-        [os.environ['PYTHONPATH'], my_process, _SPLUNK_PYTHON_PATH, 'https://localhost:8089', session_key, cluster_id, branch, build,
-         package_type],
+        [os.environ['PYTHONPATH'], my_process, _SPLUNK_PYTHON_PATH, CACHED_BUILDS_SERVER, 'https://localhost:8089',
+         session_key, cluster_id, branch, build, package_type],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = p.communicate()[0]
     print output
