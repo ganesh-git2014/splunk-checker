@@ -52,12 +52,25 @@ For the following circumstances[^1] the corresponding check points will not be c
 ### The severity of warning messages
 We define 3 different kind of severity, from most severe to least severe: `severe`, `elevated`, `low`. The `low` is defined as nearly normal here, so if a check item comes with no warning messages is also expressed as `low`. Besides, we define a severity as `unknown` for those skipped check items.
 
-### Prerequisites for upgrading cluster
+### Upgrade Cluster
+
+We integrate the cluster upgrade function on the configuration page.
+
+#### Prerequisites
+
 **What should you do**: Change the `pythonPath` item in `cluster_upgrade.conf` file to the specific path.
 
 **Reason**: Because splunk do not support install python package to its own python interpreter, we use a subprocess to enable another outside python interpreter. So you need to specify the python interpreter and make sure that interpreter has `helmut` installed. (Maybe just copy the `helmut` package to the splunk python path also works! Not try yet.)
 
 **About version**: We suggest at least `python 2.7.9` and `helmut 1.2.1`. (In earlier `helmut`, splunk installing on Windows did not use *msi* package while our app hacks something on Windows upgrade.)
+
+#### Design&Impementation
+
+- Use `helmut` upgrade function to make splunk upgrade happen
+- Use threadpool to enable concurrent stop/upgrade/start operation
+- Add a cached build server to download splunk build faster (hacked the `helmut` upgrade method and check the connection delay before download build; the cached build server can be configured in `cluster_upgrade.conf`)
+- Check installed splunk build info before upgrade (will skip upgrading if is already the target build)
+- Set timeout of each operation (default is 30*min*)
 
 ## Dev Guide
 
