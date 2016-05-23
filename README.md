@@ -68,9 +68,17 @@ We integrate the cluster upgrade function on the configuration page.
 
 - Use `helmut` upgrade function to make splunk upgrade happen
 - Use threadpool to enable concurrent stop/upgrade/start operation
-- Add a cached build server to download splunk build faster (hacked the `helmut` upgrade method and check the connection delay before download build; the cached build server can be configured in `cluster_upgrade.conf`)
-- Check installed splunk build info before upgrade (will skip upgrading if is already the target build)
+- Add a cached build server to download splunk build faster
+  - Hack the `helmut` upgrade method and check the connection delay before downloading build
+  - The cached build server can be configured in `cluster_upgrade.conf`
+  - The file struct of cached build server now is like: http://10.66.128.254:8080/current/splunk-6.4.1606-0388a21d7d58-Linux-x86_64.tgz
+- Check installed splunk build info before upgrade and will skip upgrading if is already the target build
 - Set timeout of each operation (default is 30*min*)
+  - On the configuration page, upgrade button should be enabled when the progress is *timeout*
+- Make sure for a specific cluster, only one process of upgrade is enabled at a time
+  - On the configuration page, will check the upgrade status before posting upgrade request
+  - The upgrade status should be changed once the upgrade process is enabled (consider click the *upgrade* button twice at a short time)
+
 
 ## Dev Guide
 

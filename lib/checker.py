@@ -32,6 +32,34 @@ def catch_http_exception(check_method):
     return wrap
 
 
+class ExtensibleEntry(object):
+    """
+    Use this class to solve `index out of range` issue for parsed_response of request.
+    With this class, you can acquire the result from a empty list like below:
+        >>> entry = ExtensibleEntry([])
+        >>> print entry[0]['content']['label']
+        >>> []
+    """
+
+    def __init__(self, entries):
+        """
+        :param entries: a list object.
+        """
+        self._entries = entries
+
+    def __getitem__(self, item):
+        if item < len(self._entries):
+            return self._entries[item]
+        else:
+            return ExtensibleEntry([])
+
+    def __str__(self):
+        return str(self._entries)
+
+    def __iter__(self):
+        return self._entries.__iter__()
+
+
 class Checker(Logging):
     """
     The base class for splunk checkers
@@ -80,6 +108,8 @@ class Checker(Logging):
             raise HTTPException('ReadTimeout', e)
         parsed_response = response.json()
         if response.status_code == 200:
+            # Replace the entry list to extensible one.
+            parsed_response['entry'] = ExtensibleEntry(parsed_response['entry'])
             return parsed_response
         else:
             self.logger.error(
@@ -181,3 +211,11 @@ class Checker(Logging):
             return {key: dict_obj[key] for key in select_keys}
         except IndexError:
             self.logger.error("Cannot select keys from dict @{0}".format(self.splunk_uri))
+
+
+if __name__ == '__main__':
+    entries = [{'content': {'label': 1}}]
+    result = ExtensibleEntry(entries)
+    print result[1]['content']
+    for i in result[1]['content']:
+        print i

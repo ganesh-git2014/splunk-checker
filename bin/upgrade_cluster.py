@@ -195,11 +195,11 @@ class SplunkCluster(Logging):
         """
         try:
             self.stop_cluster()
-            self.logger.info('Cluster stop successfully.')
+            self.logger.info('************Cluster stop successfully************')
             self.migrate_cluster(branch, build, package_type)
-            self.logger.info('Cluster migrate successfully.')
+            self.logger.info('************Cluster migrate successfully************')
             self.start_cluster()
-            self.logger.info('Cluster start successfully.')
+            self.logger.info('************Cluster start successfully************')
         except TimeoutException:
             self.progress.set_progress_name('timeout')
             self._post_progress()
