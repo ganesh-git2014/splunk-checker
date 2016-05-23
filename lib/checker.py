@@ -32,6 +32,17 @@ def catch_http_exception(check_method):
     return wrap
 
 
+from json import JSONEncoder
+
+
+def _default(self, obj):
+    return str(obj)
+
+
+# Fixme: hack the JSONEncoder default method to avoid raising TypeError.
+JSONEncoder.default = _default
+
+
 class ExtensibleEntry(object):
     """
     Use this class to solve `index out of range` issue for parsed_response of request.
@@ -219,3 +230,6 @@ if __name__ == '__main__':
     print result[1]['content']
     for i in result[1]['content']:
         print i
+    import json
+
+    print json.dumps({'a': result[1]})

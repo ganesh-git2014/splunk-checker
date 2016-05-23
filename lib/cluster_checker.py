@@ -391,6 +391,5 @@ if __name__ == '__main__':
     # checker1.add_peer('https://qa-systest-51.sv.splunk.com:1901', 'forwarder', 'admin', 'changed')
     # checker1.add_peer('https://qa-systest-52.sv.splunk.com:1901', 'forwarder', 'admin', 'changed')
 
-    check_result, warning_msg = checker1.check_all_items(False)
-
-    print check_result
+    check_result, warning_msg = checker1.check_all_items(True)
+    print warning_msg
