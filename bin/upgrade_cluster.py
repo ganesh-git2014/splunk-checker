@@ -78,6 +78,7 @@ def hacked_install_from_package(self_, package, uninstall_existing=True):
         download_url = sh_url  # url from which we download the build
     else:
         download_url = sf_url
+    self_.logger.info('Will download pkg from {0}'.format(download_url))
     self_.install_from_url(download_url, uninstall_existing)
 
 
@@ -282,6 +283,7 @@ class SplunkCluster(Logging):
             self.logger.error('Splunk home path is not correct for {0}!'.format(host))
             raise Exception('Splunk home path is not correct for {0}!'.format(host))
 
+        self.logger.info('Peer {0} is successfully connected!'.format(host))
         role = role.lower()
         if role == 'master':
             self.master_list.append(splunk)
@@ -380,8 +382,12 @@ if __name__ == '__main__':
     if package_type == 'splunk':
         package_type = None
 
-    # Reset the logging level to INFO.
+    # Set the logging level.
     logging.root.setLevel(logging.INFO)
+    logging.getLogger('SSHFileUtils').setLevel(logging.WARNING)
+    logging.getLogger('paramiko.transport').setLevel(logging.WARNING)
+    logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.WARNING)
+    logging.getLogger('paramiko.transport.sftp').setLevel(logging.WARNING)
 
     # Init SplunkCluster.
     cluster_info = get_cluster_info(SERVER_URI, SESSION_KEY, cluster_id)
@@ -391,6 +397,7 @@ if __name__ == '__main__':
             cluster.add_peer(peer_info['splunk_home'], peer_info['role'], peer_info['host'], peer_info['host_username'],
                              peer_info['host_password'])
     except Exception, e:
+        logging.error('Error occurs when adding peers into upgrade cluster. Error msg: {0}'.format(str(e.message)))
         post_progress(cluster.progress, delete_progress=True)
         raise e
 
