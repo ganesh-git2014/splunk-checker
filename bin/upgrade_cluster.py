@@ -125,9 +125,9 @@ class TimeoutException(BaseException):
 
 class SplunkCluster(Logging):
     def __init__(self, cluster_id):
+        self.cluster_id = cluster_id
         # Use helmut logging system.
         super(SplunkCluster, self).__init__()
-        self.cluster_id = cluster_id
         self.master_list = []
         self.other_peer_list = []
         self.progress = Progress(cluster_id, 'initializing_cluster')
