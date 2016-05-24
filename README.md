@@ -80,6 +80,13 @@ We integrate the cluster upgrade function on the configuration page.
   - The upgrade status should be changed once the upgrade process is enabled (consider click the *upgrade* button twice at a short time)
 
 
+### The logging system
+
+Currently, we use these log files to logging the progress of check and upgrade separately:
+
+- For check progress: `splunk-checker.log`
+- For upgrade progress: `bin/helmut.log`
+
 ## Dev Guide
 
 ### The implementation of the app

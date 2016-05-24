@@ -5,6 +5,7 @@
 '''
 import ConfigParser
 import json
+import logging
 import subprocess
 
 import sys
@@ -90,6 +91,7 @@ class StoreCluster(admin.MConfigHandler):
              self.getSessionKey(), cluster_id, branch, build, package_type],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = p.communicate()[0]
+        logging.info(str(output))
         confInfo['upgrade']['progress'] = str(output)
         # if output == '':
         #     confInfo['upgrade']['progress'] = 'Success'
