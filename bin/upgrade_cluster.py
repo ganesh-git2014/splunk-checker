@@ -133,6 +133,13 @@ class SplunkCluster(Logging):
         self.progress = Progress(cluster_id, 'initializing_cluster')
         self._post_progress()
 
+    @property
+    def _logger_name(self):
+        """
+        :return: constructed logger name as {cls}({name})
+        """
+        return '{cls}({name})'.format(cls=self.__class__.__name__, name=self.cluster_id)
+
     def _post_progress(self, delete_progress=False):
         post_progress(self.progress, delete_progress)
 
