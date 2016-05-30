@@ -99,7 +99,7 @@ class Checker(Logging):
         """
         uri = self.splunk_uri + '/services/auth/login'
         body = {'username': self.username, 'password': self.password}
-        response = requests.post(uri, data=body, verify=False, timeout=30)
+        response = self._session.post(uri, data=body, verify=False, timeout=30)
 
         if response.status_code != 200:
             raise Exception('getSessionKey - unable to login; check credentials')
