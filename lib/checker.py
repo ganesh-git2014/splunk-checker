@@ -84,14 +84,14 @@ class Checker(Logging):
         self.splunk_uri = splunk_uri
         self.username = username
         self.password = password
+        # Init requests.Session here so that we can reuse the connections.
+        self._session = requests.Session()
         try:
             self._session_key = self._password2sessionkey()
         except:
             self.logger.warning('Cannot get session key from `{0}`'.format(splunk_uri))
             self._session_key = None
         self._header = {'Authorization': 'Splunk %s' % self._session_key}
-        # Init requests.Session here so that we can reuse the connections.
-        self._session = requests.Session()
 
     def _password2sessionkey(self):
         """

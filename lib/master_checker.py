@@ -7,6 +7,9 @@ from checker import Checker, catch_http_exception
 
 
 class MasterChecker(Checker):
+    def __init__(self, splunk_uri, username='admin', password='changeme'):
+        super(MasterChecker, self).__init__(splunk_uri, username, password)
+
     @catch_http_exception
     def check_cluster(self):
         parsed_response = self.request_get('/services/cluster/config')
