@@ -90,6 +90,8 @@ class Checker(Logging):
             self.logger.warning('Cannot get session key from `{0}`'.format(splunk_uri))
             self._session_key = None
         self._header = {'Authorization': 'Splunk %s' % self._session_key}
+        # Init requests.Session here so that we can reuse the connections.
+        self._session = requests.Session()
 
     def _password2sessionkey(self):
         """
@@ -113,7 +115,8 @@ class Checker(Logging):
         assert endpoint.startswith('/')
         uri = self.splunk_uri + endpoint
         try:
-            response = requests.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False, timeout=30)
+            response = self._session.get(uri, headers=self._header, params={'output_mode': 'json'}, verify=False,
+                                         timeout=30)
         except Timeout, e:
             self.logger.error('HTTP read timeout at `{0}`'.format(self.splunk_uri + '/' + endpoint))
             raise HTTPException('ReadTimeout', e)
