@@ -71,7 +71,7 @@ We integrate the cluster upgrade function on the configuration page.
 - Add a cached build server to download splunk build faster
   - Hack the `helmut` upgrade method and check the connection delay before downloading build
   - The cached build server can be configured in `cluster_upgrade.conf`
-  - The file struct of cached build server now is like: http://10.66.128.254:8080/current/splunk-6.4.1606-0388a21d7d58-Linux-x86_64.tgz
+  - The file struct of cached build server now is like: http://10.66.128.254:8080/current/splunk-6.4.1606-0388a21d7d58-Linux-x86_64.tgz (Just check https://github.com/cuyu/splunk-build-manager for the cached build server code.)
 - Check installed splunk build info before upgrade and will skip upgrading if is already the target build
 - Set timeout of each operation (default is 30*min*)
   - On the configuration page, upgrade button should be enabled when the progress is *timeout*
