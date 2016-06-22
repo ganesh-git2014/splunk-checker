@@ -5,7 +5,7 @@
 '''
 import logging
 import sys
-from multiprocessing import Pool, Queue
+from multiprocessing import Pool, Manager
 from xml.sax import saxutils
 import xml.etree.ElementTree as ElementTree
 # import default
@@ -123,7 +123,8 @@ def run():
     else:
         raise Exception('Failed to get cluster info from kvstore.')
 
-    queue = Queue()
+    manager = Manager()
+    queue = manager.Queue()
     pool = Pool(processes=len(cluster_info_list))
     async_results = dict()
 
