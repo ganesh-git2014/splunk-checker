@@ -3,8 +3,9 @@
 @contact: cuyu@splunk.com
 @since: 3/8/16
 '''
+import logging
 import sys
-import threading
+from multiprocessing import Pool
 from xml.sax import saxutils
 import xml.etree.ElementTree as ElementTree
 # import default
@@ -80,32 +81,25 @@ def do_scheme():
     print SCHEME
 
 
-class CheckThread(threading.Thread):
-    def __init__(self, cluster_info):
-        threading.Thread.__init__(self)
-        self.cluster_info = cluster_info
+def start_check(cluster_info):
+    # Init checker.
+    enable_shcluster = True if cluster_info['enable_shcluster'] == 'True' else False
+    enable_cluster = True if cluster_info['enable_cluster'] == 'True' else False
+    checker = ClusterChecker(cluster_info['cluster_id'], enable_shcluster, enable_cluster,
+                             int(cluster_info['search_factor']), int(cluster_info['replication_factor']))
+    for peer_info in cluster_info['peers']:
+        checker.add_peer(peer_info['splunk_uri'], peer_info['role'], peer_info['username'], peer_info['password'])
 
-    def run(self):
-        # Init checker.
-        enable_shcluster = True if self.cluster_info['enable_shcluster'] == 'True' else False
-        enable_cluster = True if self.cluster_info['enable_cluster'] == 'True' else False
-        checker = ClusterChecker(self.cluster_info['cluster_id'], enable_shcluster, enable_cluster,
-                                 int(self.cluster_info['search_factor']), int(self.cluster_info['replication_factor']))
-        for peer_info in self.cluster_info['peers']:
-            checker.add_peer(peer_info['splunk_uri'], peer_info['role'], peer_info['username'], peer_info['password'])
+    # Start checking.
+    results, warning_messages = checker.check_all_items(return_event=True)
 
-        # Start checking.
-        results, warning_messages = checker.check_all_items(return_event=True)
-
-        # Send events.
-        init_stream()
-        for item in checker.check_points:
-            if results:
-                send_data(results[item], 'check_stats', item)
-                send_data(warning_messages[item], 'warning_msg', item)
-            else:
-                send_data('Exception occurs when checking this cluster.', 'warning_msg', item)
-        fini_stream()
+    # Send events.
+    for item in checker.check_points:
+        if results:
+            send_data(results[item], 'check_stats', item)
+            send_data(warning_messages[item], 'warning_msg', item)
+        else:
+            send_data('Exception occurs when checking this cluster.', 'warning_msg', item)
 
 
 def run():
@@ -128,9 +122,18 @@ def run():
     else:
         raise Exception('Failed to get cluster info from kvstore.')
 
-    checker_list = []
+    pool = Pool(processes=len(cluster_info_list))
+    async_results = dict()
+    init_stream()
     for cluster_info in cluster_info_list:
-        CheckThread(cluster_info).run()
+        async_results[cluster_info['cluster_id']] = pool.apply_async(start_check, (cluster_info,))
+
+    for cluster_info in cluster_info_list:
+        result = async_results[cluster_info['cluster_id']].get()
+        if result:
+            logging.root.error(
+                'Exception occurs when checking cluster {0}: {1}'.format(cluster_info['cluster_id'], result))
+    fini_stream()
 
 
 if __name__ == '__main__':
