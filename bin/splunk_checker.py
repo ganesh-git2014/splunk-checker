@@ -5,7 +5,7 @@
 '''
 import logging
 import sys
-from multiprocessing import Pool
+from multiprocessing import Pool, Queue
 from xml.sax import saxutils
 import xml.etree.ElementTree as ElementTree
 # import default
@@ -81,7 +81,7 @@ def do_scheme():
     print SCHEME
 
 
-def start_check(cluster_info):
+def start_check(cluster_info, queue):
     # Init checker.
     enable_shcluster = True if cluster_info['enable_shcluster'] == 'True' else False
     enable_cluster = True if cluster_info['enable_cluster'] == 'True' else False
@@ -96,10 +96,11 @@ def start_check(cluster_info):
     # Send events.
     for item in checker.check_points:
         if results:
-            send_data(results[item], 'check_stats', item)
-            send_data(warning_messages[item], 'warning_msg', item)
+            queue.put((results[item], 'check_stats', item,))
+            queue.put((warning_messages[item], 'warning_msg', item,))
         else:
-            send_data('Exception occurs when checking this cluster.', 'warning_msg', item)
+            queue.put(('Exception occurs when checking cluster {0}.'.format(cluster_info['cluster_id']), 'warning_msg',
+                       item,))
 
 
 def run():
@@ -122,17 +123,22 @@ def run():
     else:
         raise Exception('Failed to get cluster info from kvstore.')
 
+    queue = Queue()
     pool = Pool(processes=len(cluster_info_list))
     async_results = dict()
-    init_stream()
+
     for cluster_info in cluster_info_list:
-        async_results[cluster_info['cluster_id']] = pool.apply_async(start_check, (cluster_info,))
+        async_results[cluster_info['cluster_id']] = pool.apply_async(start_check, (cluster_info, queue,))
 
     for cluster_info in cluster_info_list:
         result = async_results[cluster_info['cluster_id']].get()
         if result:
             logging.root.error(
                 'Exception occurs when checking cluster {0}: {1}'.format(cluster_info['cluster_id'], result))
+
+    init_stream()
+    while not queue.empty():
+        send_data(*queue.get())
     fini_stream()
 
 
