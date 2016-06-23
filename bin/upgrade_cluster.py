@@ -47,6 +47,11 @@ SSHSplunk.get_binary_path = get_binary_path
 
 
 def install_from_archive(self_, archive_path, uninstall_existing=True):
+    # Transform the relative archive_path to absolute path.
+    if archive_path.startswith('/'):
+        code, stdout, stderr = self_.connection.execute('cygpath -w -p /')
+        cygwin_home = stdout
+        archive_path = cygwin_home + archive_path
     archive_path = archive_path.replace('/', '\\')
     directory = self_.splunk_home.replace('/', '\\')
     if (uninstall_existing == True):
@@ -54,7 +59,10 @@ def install_from_archive(self_, archive_path, uninstall_existing=True):
     else:  # It stops existing splunk & installs new splunk from the arhive on top of the existing one.
         self_._stop_splunk_if_needed()
 
+    # Change the seps in splunk home temporarily for executing cmd in self._install_from_msi_via_ssh
+    self_._splunk_home = self_.splunk_home.replace('/', '\\')
     self_._install_from_msi_via_ssh(archive_path, directory, uninstall_existing)
+    self_._splunk_home = self_.splunk_home.replace('\\', '/')
     self_.logger.info('Splunk has been installed.')
     self_.start()
 
@@ -350,7 +358,7 @@ def test_single_instance():
     """
     Only for test.
     """
-    conn = SSHConnection(host='10.66.130.3',
+    conn = SSHConnection(host='sys-sh-master.splunk.local',
                          user='Administrator',
                          password='QWE123asd',
                          domain='')
