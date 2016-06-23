@@ -4,7 +4,6 @@
 @since: 6/22/16
 '''
 import os
-
 import rack
 from helmut.splunk import SSHSplunk
 from helmut.splunk.windowsssh import WindowsSSHSplunk
@@ -60,6 +59,8 @@ def test_on_windows():
              'sys-sh-sh3.splunk.local', 'sys-sh-idx1.splunk.local', 'sys-sh-idx2.splunk.local',
              'sys-sh-idx3.splunk.local', 'sys-sh-idx4.splunk.local', 'sys-sh-idx5.splunk.local',
              'sys-sh-deployer.splunk.local', 'sys-sh-fwd1.splunk.local', 'sys-sh-fwd2.splunk.local']
+    # # Change this variable will make the install not happen and just return splunk instances.
+    # rack._parallelize._disable_rack = True
     # Helmut will uninstall splunk first if already exit on the path.
     splunks = rack.install.splunk_instances(hosts, 'c:/splunk', 'Administrator', 'QWE123asd',
                                             url='http://health.sv.splunk.com:8080/current/splunk-7.0.0-03c0d2c2f134-x64-release.msi')
@@ -72,8 +73,9 @@ def test_on_windows():
                                        replication_factor=2)
     rack.configure.index_cluster(master=master, peers=indexers, search_heads=search_heads, replication_factor=3,
                                  search_factor=2)
+    # Fixme: have problem to add license because of the file path not correct on different platform.
     rack.configure.license_master(master=master, slaves=splunks[1:],
-                                  license_path='/Users/CYu/Code/splunk/splunk-checker/bin/50TB-1.lic')
+                                  license_path='50TB-1.lic')
 
 
 def test_on_linux():
@@ -93,7 +95,7 @@ def test_on_linux():
     rack.configure.index_cluster(master=master, peers=indexers, search_heads=search_heads, replication_factor=3,
                                  search_factor=2)
     rack.configure.license_master(master=master, slaves=splunks[1:],
-                                  license_path='/Users/CYu/Code/splunk/splunk-checker/bin/50TB-1.lic')
+                                  license_path='50TB-1.lic')
 
 
 if __name__ == '__main__':
