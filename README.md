@@ -212,3 +212,4 @@ Restart splunk, and the new check item will be found in the coming events.
 - Support using json file as input cluster topology
 - Support installing and setting a cluster using `rack`
 - Compatibility for `Honey Buzz` ssl check
+- Refine the stored cluster info structure by setting one splunk as one item in mongodb

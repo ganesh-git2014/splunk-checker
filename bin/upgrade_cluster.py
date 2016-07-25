@@ -50,7 +50,7 @@ def install_from_archive(self_, archive_path, uninstall_existing=True):
     # Transform the relative archive_path to absolute path.
     if archive_path.startswith('/'):
         code, stdout, stderr = self_.connection.execute('cygpath -w -p /')
-        cygwin_home = stdout
+        cygwin_home = stdout.strip()
         archive_path = cygwin_home + archive_path
     archive_path = archive_path.replace('/', '\\')
     directory = self_.splunk_home.replace('/', '\\')
