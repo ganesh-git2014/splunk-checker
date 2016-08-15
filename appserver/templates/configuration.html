@@ -196,13 +196,18 @@ page_less = "%s/pages/%s/bootstrap.less" % (app_less ,page)
             Cluster ID:<br>
             <input id="cluster_id_upgrade" required><br>
             Branch (e.g. current/galaxy):<br>
-            <input id="branch" required><br>
-            Build (e.g. f2c836328108):<br>
+            <input id="branch" value="current" required><br>
+            Build (e.g. f2c836328108, If specified, input branch will be ignored):<br>
             <input id="build" value="latest"><br>
             Package Type:<br>
             <select id="package_type">
                 <option selected value="splunk">Splunk</option>
                 <option value="universalforwarder">Universal Forwarder</option>
+                <option value="hunk">Hunk</option>
+                <option value="hunkbeta">Hunk Beta</option>
+                <option value="splunklight">Splunk Light</option>
+                <option value="splunklightbeta">Splunk Light Beta</option>
+                <option value="splunkbeta">Splunk Beta</option>
             </select><br>
             <input type="submit" id="upgrade_cluster_btn" value="Upgrade!"><br>
         </form>
